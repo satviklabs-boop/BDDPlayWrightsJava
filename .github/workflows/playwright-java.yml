@@ -1,0 +1,60 @@
+name: Playwright Java BDD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Cucumber suite (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '17', '21' ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          cache: maven
+
+      - name: Run the suite
+        run: mvn -B clean test
+        env:
+          BASE_URL: ${{ vars.BASE_URL || 'https://the-internet.herokuapp.com' }}
+          UI_USERNAME: ${{ secrets.UI_USERNAME || 'tomsmith' }}
+          UI_PASSWORD: ${{ secrets.UI_PASSWORD || 'SuperSecretPassword!' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://reqres.in' }}
+          API_KEY: ${{ secrets.API_KEY || 'reqres-free-v1' }}
+          HEADLESS: 'true'
+
+      - name: Upload Cucumber report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-report-java-${{ matrix.java }}
+          path: |
+            target/cucumber-report.html
+            target/cucumber-report.json
+            target/cucumber-report.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-artifacts-java-${{ matrix.java }}
+          path: target/artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
