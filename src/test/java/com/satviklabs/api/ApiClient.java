@@ -1,5 +1,6 @@
 package com.satviklabs.api;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.microsoft.playwright.APIRequest;
@@ -62,14 +63,40 @@ public class ApiClient {
 
     // ------------------------------------------------------------ helpers
 
-    /** Parses the response body as a JSON object. Throws if it is not valid JSON. */
+    /**
+     * Parses the response body as a JSON object.
+     *
+     * Throws if the body is not valid JSON, or if the root is a JSON array -
+     * use {@link #bodyAsJsonElement} when the response may be either shape.
+     */
     public JsonObject bodyAsJson(APIResponse response) {
+        return bodyAsJsonElement(response).getAsJsonObject();
+    }
+
+    /**
+     * Parses the response body into any JSON value: object, array, or primitive.
+     *
+     * Some APIs return a bare array at the root ({\code [{...},{...}]} rather than
+     * {\code {"data":[...]}}), so callers that only need to inspect the payload
+     * should use this instead of {@link #bodyAsJson}.
+     */
+    public JsonElement bodyAsJsonElement(APIResponse response) {
         String text = response.text();
         if (text == null || text.isBlank()) {
             throw new IllegalStateException(
                     "Response body was empty (HTTP " + response.status() + ")");
         }
-        return JsonParser.parseString(text).getAsJsonObject();
+        try {
+            return JsonParser.parseString(text);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Response body was not valid JSON (HTTP " + response.status()
+                            + "): " + truncate(text), e);
+        }
+    }
+
+    private String truncate(String text) {
+        return text.length() <= 500 ? text : text.substring(0, 500) + "...";
     }
 
     public String bodyAsText(APIResponse response) {

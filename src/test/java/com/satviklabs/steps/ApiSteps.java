@@ -82,6 +82,16 @@ public class ApiSteps {
         logResponse();
     }
 
+    /** Same payload, caller-chosen path - keeps the step portable across APIs. */
+    @When("I POST to the {string} endpoint with name {string} and job {string}")
+    public void iPostToTheEndpoint(String path, String name, String job) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("name", name);
+        payload.put("job", job);
+        lastResponse = client().post(path, payload);
+        logResponse();
+    }
+
     @When("I PUT an update request for user {int} with name {string} and job {string}")
     public void iPutAnUpdateRequest(int userId, String name, String job) {
         Map<String, String> payload = new HashMap<>();
@@ -165,12 +175,35 @@ public class ApiSteps {
                 .isEqualTo(expected);
     }
 
+    /**
+     * Handles APIs that return a bare JSON array at the root, where there is no
+     * wrapper field to inspect. Asserts the array is present and non-empty.
+     */
+    @Then("the response should be a non-empty JSON array")
+    public void theResponseShouldBeANonEmptyJsonArray() {
+        JsonElement root = client().bodyAsJsonElement(requireResponse());
+        Assertions.assertThat(root.isJsonArray())
+                .as("Expected the response root to be a JSON array. Body: %s", safeBody())
+                .isTrue();
+        Assertions.assertThat(root.getAsJsonArray().size())
+                .as("Expected the JSON array to contain at least one element")
+                .isGreaterThan(0);
+    }
+
+    /**
+     * Asserts the body carries no data. Servers differ here: some return a
+     * genuinely empty body, others an empty JSON object such as {@code {}}.
+     * Both mean "no payload", so both are accepted.
+     */
     @Then("the response body should be empty")
     public void theResponseBodyShouldBeEmpty() {
         String body = requireResponse().text();
-        Assertions.assertThat(body == null ? "" : body.trim())
+        String trimmed = body == null ? "" : body.trim();
+        Assertions.assertThat(trimmed)
                 .as("Expected an empty response body. Body was: %s", safeBody())
-                .isEmpty();
+                .satisfiesAnyOf(
+                        value -> Assertions.assertThat((String) value).isEmpty(),
+                        value -> Assertions.assertThat((String) value).isEqualTo("{}"));
     }
 
     /**

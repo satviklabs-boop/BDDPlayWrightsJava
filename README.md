@@ -350,6 +350,9 @@ Confirm the glue path covers your step package. `RunCucumberTest` declares:
 **API tests fail with 429**
 The default target (`reqres.in`) allows **40 anonymous requests per day per IP**. The framework detects this and fails with an explicit message, since it is an environment limit rather than a test defect. Fix: register a free key at [reqres.in](https://app.reqres.in/sign-up), put it in `.env` as `API_KEY`, or wait for the daily reset (midnight UTC).
 
+**Step classes fail to instantiate**
+Cucumber requires each step class to have a **public no-argument constructor**; PicoContainer satisfies its parameters. Do not replace the constructor with a parameterised-only one.
+
 **API tests fail with 401/403**
 Your API key has expired or is missing. Set a fresh `API_KEY` in `.env`.
 
