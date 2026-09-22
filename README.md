@@ -128,9 +128,6 @@ You should see the UI login scenarios pass. API scenarios require quota on the t
 ### Advanced examples
 
 ```powershell
-# Run a single feature file
-mvn test -Dcucumber.features=src/test/resources/features/ui/login.feature
-
 # Run by scenario name
 mvn test -Dcucumber.filter.name="Successful login"
 
@@ -142,6 +139,35 @@ $env:BASE_URL="https://staging.example.com"; mvn test
 ```
 
 > `mvn test` runs headless by default.
+
+### Running the quota-free API check
+
+The default API target, `reqres.in`, allows only **40 anonymous requests per day**.
+Once that quota is gone, every API scenario fails with **HTTP 429**:
+
+```
+The API returned HTTP 429 (rate limited) instead of 200.
+This is an environment limitation, not a defect in the test.
+```
+
+To prove the API layer itself works, run the smoke check against a target with no
+quota:
+
+```powershell
+tools\run-api-smoke.cmd
+```
+
+which is equivalent to:
+
+```powershell
+mvn test -Dcucumber.filter.tags="@api-smoke" -DAPI_BASE_URL=https://jsonplaceholder.typicode.com
+```
+
+> **Do not** narrow a run with `-Dcucumber.features=...`. This suite discovers
+> features from the classpath, and setting that property makes Cucumber ignore all
+> other discovery selectors, failing with
+> `TestEngine with ID 'cucumber' failed to discover tests`.
+> Select with **tags** instead.
 
 ---
 
@@ -266,8 +292,8 @@ All configuration flows through `.env` → `ConfigLoader` → the code. Nothing 
 | `BASE_URL` | `https://the-internet.herokuapp.com` | UI base URL |
 | `UI_USERNAME` | `tomsmith` | Valid UI username |
 | `UI_PASSWORD` | `SuperSecretPassword!` | Valid UI password |
-| `API_BASE_URL` | `https://reqres.in` | API base URL |
-| `API_KEY` | `reqres-free-v1` | Value sent as the `x-api-key` header |
+| `API_BASE_URL` | `https://jsonplaceholder.typicode.com` | API base URL |
+| `API_KEY` | *(empty)* | Optional value sent as the `x-api-key` header |
 | `API_USERNAME` | `eve.holt@reqres.in` | API login email |
 | `API_PASSWORD` | `cityslicka` | API login password |
 | `HEADLESS` | `true` | Run browsers headless |
@@ -348,7 +374,7 @@ Confirm the glue path covers your step package. `RunCucumberTest` declares:
 `com.satviklabs.steps,com.satviklabs.hooks`. New step packages must be added there.
 
 **API tests fail with 429**
-The default target (`reqres.in`) allows **40 anonymous requests per day per IP**. The framework detects this and fails with an explicit message, since it is an environment limit rather than a test defect. Fix: register a free key at [reqres.in](https://app.reqres.in/sign-up), put it in `.env` as `API_KEY`, or wait for the daily reset (midnight UTC).
+Only relevant if you switch `API_BASE_URL` to `reqres.in`, which allows **40 anonymous requests per day per IP**. The framework detects this and fails with an explicit message, since it is an environment limit rather than a test defect. Fix: register a free key at [reqres.in](https://app.reqres.in/sign-up), set `API_KEY`, or wait for the daily reset (midnight UTC). The default target (`jsonplaceholder`) has no such quota.
 
 **Step classes fail to instantiate**
 Cucumber requires each step class to have a **public no-argument constructor**; PicoContainer satisfies its parameters. Do not replace the constructor with a parameterised-only one.
@@ -357,7 +383,9 @@ Cucumber requires each step class to have a **public no-argument constructor**; 
 Your API key has expired or is missing. Set a fresh `API_KEY` in `.env`.
 
 **API tests fail with 404**
-`reqres.in` occasionally changes which demo resources exist. Check the current [documentation](https://app.reqres.in/documentation) and adjust the paths in `auth-api.feature`.
+The path does not exist on the target. Note that `jsonplaceholder` only mocks writes (`POST`/`PUT`/`PATCH`/`DELETE`) under `/posts`, `/comments`, `/albums`, `/photos` and `/todos`; other collections are read-only. Adjust the paths in `auth-api.feature` accordingly.
+
+> **Why not reqres.in by default?** It is a richer demo API (real auth, pagination) and the framework still supports it, but its 40-requests-per-day anonymous cap makes a full suite run fail once exhausted. `jsonplaceholder` needs no key and has no quota, so the suite is green out of the box.
 
 ---
 

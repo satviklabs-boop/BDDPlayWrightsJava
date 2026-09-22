@@ -90,13 +90,21 @@ public final class ConfigLoader {
 
     // --------------------------------------------------------------- API
 
+    /**
+     * Default is jsonplaceholder: it needs no API key and has no daily quota,
+     * so the suite is green out of the box.
+     *
+     * reqres.in is a richer demo API but caps anonymous use at 40 requests/day
+     * per IP, which breaks a full run once exhausted. To use it instead, set
+     * API_BASE_URL=https://reqres.in and supply a working API_KEY.
+     */
     public static String apiBaseUrl() {
-        return get("API_BASE_URL", "https://reqres.in");
+        return get("API_BASE_URL", "https://jsonplaceholder.typicode.com");
     }
 
-    /** Value for the {@code x-api-key} header. Reqres now requires a key. */
+    /** Optional. Only required by targets that authenticate, such as reqres.in. */
     public static String apiKey() {
-        return get("API_KEY", "reqres-free-v1");
+        return get("API_KEY", "");
     }
 
     public static String apiUsername() {
@@ -119,6 +127,14 @@ public final class ConfigLoader {
 
     public static int defaultTimeoutMs() {
         return Integer.parseInt(get("DEFAULT_TIMEOUT", "30000"));
+    }
+
+    /**
+     * Per-request HTTP timeout. Deliberately larger than the UI default: public
+     * demo APIs can be slow, and a slow response is not a test defect.
+     */
+    public static int apiTimeoutMs() {
+        return Integer.parseInt(get("API_TIMEOUT", "60000"));
     }
 
     public static String env() {

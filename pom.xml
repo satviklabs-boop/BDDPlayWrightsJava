@@ -27,6 +27,8 @@
         <logback.version>1.5.12</logback.version>
         <dotenv.version>3.0.0</dotenv.version>
         <gson.version>2.11.0</gson.version>
+        <!-- Empty means "run all scenarios". Override with -Dcucumber.filter.tags="@smoke". -->
+        <cucumber.filter.tags></cucumber.filter.tags>
     </properties>
 
     <dependencies>
@@ -124,6 +126,18 @@
                     <includes>
                         <include>**/RunCucumberTest.java</include>
                     </includes>
+                    <!--
+                      Cucumber's JUnit Platform engine reads its settings as JUnit
+                      configuration parameters, not as plain system properties.
+                      Passing -Dcucumber.filter.tags through here makes the tag
+                      filter actually apply to the suite. The property defaults to
+                      empty, which means "run everything".
+                    -->
+                    <properties>
+                        <configurationParameters>
+                            cucumber.filter.tags=${cucumber.filter.tags}
+                        </configurationParameters>
+                    </properties>
                 </configuration>
             </plugin>
 

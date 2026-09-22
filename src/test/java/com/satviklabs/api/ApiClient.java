@@ -36,7 +36,10 @@ public class ApiClient {
         this.context = playwright.request().newContext(
                 new APIRequest.NewContextOptions()
                         .setBaseURL(ConfigLoader.apiBaseUrl())
-                        .setExtraHTTPHeaders(headers));
+                        .setExtraHTTPHeaders(headers)
+                        // Generous per-request budget: a slow public demo API over a
+                        // shared runner should not look like a defect.
+                        .setTimeout(ConfigLoader.apiTimeoutMs()));
     }
 
     // ------------------------------------------------------------- verbs

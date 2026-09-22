@@ -7,8 +7,6 @@ import org.junit.platform.suite.api.SelectClasspathResource;
 import org.junit.platform.suite.api.Suite;
 import org.junit.platform.suite.api.AfterSuite;
 
-import static io.cucumber.junit.platform.engine.Constants.FEATURES_PROPERTY_NAME;
-import static io.cucumber.junit.platform.engine.Constants.FILTER_TAGS_PROPERTY_NAME;
 import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
 import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
 import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_PROPERTY_NAME;
@@ -16,10 +14,9 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_P
 /**
  * Single entry point for the whole suite.
  *
- * Run everything: mvn test
- * Run by tag: mvn test -Dcucumber.filter.tags="@smoke"
- * Run a single feature: mvn test
- * -Dcucumber.features=src/test/resources/features/ui/login.feature
+ * Run everything:       mvn test
+ * Run by tag:           mvn test -Dcucumber.filter.tags="@smoke"
+ * Run one feature file: use a tag that is unique to it (see the note below).
  *
  * Tag filters can also be passed via the Maven profiles in pom.xml
  * (-Psmoke, -Pregression, -Pui, -Papi).
@@ -31,7 +28,7 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_P
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, "
         + "html:target/cucumber-report.html, "
         + "json:target/cucumber-report.json, "
-        + "junit:target/cucumber-report.xml")
+        + "junit:target/TEST-cucumber.xml")
 @ConfigurationParameter(key = PLUGIN_PUBLISH_QUIET_PROPERTY_NAME, value = "true")
 public class RunCucumberTest {
 
@@ -45,11 +42,16 @@ public class RunCucumberTest {
         Hooks.shutdown();
     }
 
-    static {
-        // Allow the feature path to be overridden without editing this class.
-        String features = System.getProperty("cucumber.features");
-        if (features != null && !features.isBlank()) {
-            System.setProperty(FEATURES_PROPERTY_NAME, features);
-        }
-    }
+    //
+    // NOTE ON SELECTING FEATURES
+    //
+    // This suite discovers features from the classpath ("features"), so narrow a
+    // run with TAGS rather than with the cucumber.features property:
+    //
+    //   mvn test -Dcucumber.filter.tags="@api-smoke"
+    //
+    // Setting cucumber.features at the same time makes Cucumber ignore all other
+    // discovery selectors and the engine fails with
+    // "TestEngine with ID 'cucumber' failed to discover tests".
+    //
 }

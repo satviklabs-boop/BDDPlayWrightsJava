@@ -1,70 +1,81 @@
 @api
-Feature: Authentication API
-
+Feature: REST API behaviour
   As an API consumer
-  I want to authenticate and manage resources over HTTP
+  I want to exercise real HTTP endpoints
   So that I can verify the service without a browser
+  Default target: https://jsonplaceholder.typicode.com (no key, no quota)
+  To point this at another service:
+    mvn test -DAPI_BASE_URL=https://my-api.example.com -Dcucumber.filter.tags="@api"
 
+  # ---------------------------------------------------------------- GET list
   @smoke @positive
-  Scenario: Successful login returns a token
-    When I POST a login request with a valid email and password
+  Scenario: Listing resources returns a collection
+    When I GET the "/posts" endpoint
     Then the response status should be 200
-    And the response body should contain a "token" field
+    # jsonplaceholder returns a bare array at the root rather than {"data":[...]}
+    And the response should be a non-empty JSON array
+  @regression @positive
+  Scenario: Listing resources filtered by an owner
+    When I GET the "/posts?userId=1" endpoint
+    Then the response status should be 200
+    And the response should be a non-empty JSON array
+  # ----------------------------------------------------------------- GET one
+  @smoke @positive
+  Scenario: Fetching a known resource returns it
+    When I GET the "/posts/1" endpoint
+    Then the response status should be 200
+    And the response body should contain a "title" field
+    And the response body field "id" should equal "1"
 
   @regression @positive
-  Scenario: Login response echoes no password
-    When I POST a login request with a valid email and password
+  Scenario Outline: Fetching resources by id returns the matching record
+    When I GET the "/posts/<id>" endpoint
     Then the response status should be 200
-    And the response body should not contain a "password" field
-
-  @regression @negative
-  Scenario: Login without a password is rejected
-    When I POST a login request with only an email
-    Then the response status should be 400
-    And the response body should contain an "error" field
-
-  @smoke @positive
-  Scenario: Listing users returns a paginated collection
-    When I GET the "/api/users?page=2" endpoint
-    Then the response status should be 200
-    And the response should contain a non-empty "data" array
-
-  @regression @positive
-  Scenario Outline: Fetching a single user returns that user
-    When I GET the "/api/users/<id>" endpoint
-    Then the response status should be 200
-    And the response body field "data.id" should equal "<id>"
+    And the response body field "id" should equal "<id>"
 
     Examples:
       | id |
-      | 2  |
-      | 3  |
-
-  @regression @negative
-  Scenario: Fetching a non-existent user returns 404
-    When I GET the "/api/users/9999" endpoint
-    Then the response status should be 404
-    And the response body should be empty or an empty JSON object
+      | 1  |
+      | 5  |
+      | 20 |
 
   @regression @positive
-  Scenario: Creating a resource returns the created payload
-    When I POST a create request with name "Satvik" and job "Automation Engineer"
+  Scenario: Fetching a user returns their email
+    When I GET the "/users/1" endpoint
+    Then the response status should be 200
+    And the response body should contain an "email" field
+  # ----------------------------------------------------------------- writing
+  @regression @positive
+  Scenario: Creating a resource is accepted
+    When I POST to the "/posts" endpoint with name "Satvik" and job "Automation Engineer"
     Then the response status should be 201
-    And the response body field "name" should equal "Satvik"
+    And the response body should contain an "id" field
 
   @regression @positive
   Scenario: Updating a resource reflects the new values
-    When I PUT an update request for user 2 with name "Satvik" and job "QA Lead"
+    When I PUT to the "/posts/1" endpoint with name "Satvik" and job "QA Lead"
     Then the response status should be 200
     And the response body field "job" should equal "QA Lead"
 
   @regression @positive
-  Scenario: Deleting a resource returns no content
-    When I DELETE the "/api/users/2" endpoint
-    Then the response status should be 204
+  Scenario: Patching a resource reflects the new value
+    When I PATCH the "/posts/1" endpoint with name "Satvik"
+    Then the response status should be 200
+    And the response body field "name" should equal "Satvik"
 
+  @regression @positive
+  Scenario: Deleting a resource is accepted
+    When I DELETE the "/posts/1" endpoint
+    Then the response status should be 200
+  # ------------------------------------------------------------------ errors
+  @regression @negative
+  Scenario: An unknown path is not found
+    When I GET the "/this-does-not-exist" endpoint
+    Then the response status should be 404
+    And the response body should be empty
+  # ----------------------------------------------------------------- headers
   @regression
   Scenario: The API responds with JSON
-    When I GET the "/api/users?page=1" endpoint
+    When I GET the "/posts/1" endpoint
     Then the response status should be 200
     And the response content type should be "application/json"

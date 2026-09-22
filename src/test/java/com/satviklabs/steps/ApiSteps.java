@@ -73,6 +73,15 @@ public class ApiSteps {
         logResponse();
     }
 
+    @When("I POST to the {string} endpoint with name {string} and job {string}")
+    public void iPostToTheEndpointWithNameAndJob(String path, String name, String job) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("name", name);
+        payload.put("job", job);
+        lastResponse = client().post(path, payload);
+        logResponse();
+    }
+
     @When("I POST a create request with name {string} and job {string}")
     public void iPostACreateRequest(String name, String job) {
         Map<String, String> payload = new HashMap<>();
@@ -82,22 +91,30 @@ public class ApiSteps {
         logResponse();
     }
 
-    /** Same payload, caller-chosen path - keeps the step portable across APIs. */
-    @When("I POST to the {string} endpoint with name {string} and job {string}")
-    public void iPostToTheEndpoint(String path, String name, String job) {
+    @When("I PUT an update request for {int} with name {string} and job {string}")
+    public void iPutAnUpdateRequest(int id, String name, String job) {
         Map<String, String> payload = new HashMap<>();
         payload.put("name", name);
         payload.put("job", job);
-        lastResponse = client().post(path, payload);
+        lastResponse = client().put("/posts/" + id, payload);
         logResponse();
     }
 
-    @When("I PUT an update request for user {int} with name {string} and job {string}")
-    public void iPutAnUpdateRequest(int userId, String name, String job) {
+    /** Path-explicit variant, so the step is reusable across any endpoint. */
+    @When("I PUT to the {string} endpoint with name {string} and job {string}")
+    public void iPutToTheEndpointWithNameAndJob(String path, String name, String job) {
         Map<String, String> payload = new HashMap<>();
         payload.put("name", name);
         payload.put("job", job);
-        lastResponse = client().put("/api/users/" + userId, payload);
+        lastResponse = client().put(path, payload);
+        logResponse();
+    }
+
+    @When("I PATCH the {string} endpoint with name {string}")
+    public void iPatchTheEndpointWithName(String path, String name) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("name", name);
+        lastResponse = client().patch(path, payload);
         logResponse();
     }
 
@@ -152,13 +169,31 @@ public class ApiSteps {
                 .isFalse();
     }
 
+    /**
+     * Asserts a non-empty JSON array is present. Handles both API conventions:
+     * a wrapped object ({\code {"data":[...]}}) and a bare array root
+     * ({\code [{...},{...}]}), since both are common and the Gherkin step should
+     * not have to care which one the service uses.
+     */
     @Then("the response should contain a non-empty {string} array")
     public void theResponseShouldContainNonEmptyArray(String field) {
-        JsonObject json = client().bodyAsJson(requireResponse());
-        Assertions.assertThat(json.has(field))
-                .as("Expected an array field '%s'. Body: %s", field, safeBody())
-                .isTrue();
-        JsonArray array = json.getAsJsonArray(field);
+        JsonElement root = client().bodyAsJsonElement(requireResponse());
+        JsonArray array;
+
+        if (root.isJsonArray()) {
+            // Bare array at the root: the whole payload is the collection.
+            array = root.getAsJsonArray();
+        } else {
+            JsonObject json = root.getAsJsonObject();
+            Assertions.assertThat(json.has(field))
+                    .as("Expected an array field '%s'. Body: %s", field, safeBody())
+                    .isTrue();
+            Assertions.assertThat(json.get(field).isJsonArray())
+                    .as("Field '%s' should be a JSON array. Body: %s", field, safeBody())
+                    .isTrue();
+            array = json.getAsJsonArray(field);
+        }
+
         Assertions.assertThat(array.size())
                 .as("Array '%s' should contain at least one element", field)
                 .isGreaterThan(0);
