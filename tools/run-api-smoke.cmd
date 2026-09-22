@@ -6,7 +6,11 @@ REM The default API target needs no key and has no daily quota, so this is a fas
 REM (browser-free) way to check the HTTP layer in isolation.
 REM
 REM   tools\run-api-smoke.cmd
-REM	tools\run-api-smoke.cmd @smoke     (only @smoke scenarios)
+REM   tools\run-api-smoke.cmd @smoke     (only @smoke scenarios)
+REM
+REM Requires JAVA_HOME to point at a JDK 17+ install, and Maven (`mvn`) on PATH.
+REM Narrow the run with TAGS, never with -Dcucumber.features: that property makes
+REM Cucumber ignore the suite's classpath discovery and fail to discover tests.
 REM ---------------------------------------------------------------------------
 setlocal
 
@@ -16,16 +20,18 @@ if "%JAVA_HOME%"=="" (
   exit /b 1
 )
 
-pushd "%~dp0.."
-set "MVN_CMD=mvn"
-if exist "mvnw.cmd" set "MVN_CMD=mvnw.cmd"
-
-REM Narrow the run with TAGS, not with -Dcucumber.features. Setting the features
-REM property makes Cucumber ignore the suite's classpath discovery and fail with
-REM "TestEngine with ID 'cucumber' failed to discover tests".
 set "TAGS=@api"
 if not "%~1"=="" set "TAGS=@api and %~1"
 
-call %MVN_CMD% -B test -Dcucumber.filter.tags="%TAGS%"
+pushd "%~dp0.."
+call mvn -B test -Dcucumber.filter.tags="%TAGS%"
+set "EXIT_CODE=%ERRORLEVEL%"
+popd
 
-endlocal
+if "%EXIT_CODE%"=="0" (
+  echo [PASSED] API scenarios completed successfully.
+) else (
+  echo [FAILED] API scenarios failed with exit code %EXIT_CODE%.
+)
+
+endlocal & exit /b %EXIT_CODE%
