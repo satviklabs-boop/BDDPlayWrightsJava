@@ -373,6 +373,23 @@ mvn exec:java -e -D exec.mainClass=com.microsoft.playwright.CLI -D exec.args="in
 Confirm the glue path covers your step package. `RunCucumberTest` declares:
 `com.satviklabs.steps,com.satviklabs.hooks`. New step packages must be added there.
 
+**`TestEngine with ID 'cucumber' failed to discover tests`**
+The `cucumber.features` property was set, which makes Cucumber ignore every other
+discovery selector (including the suite's classpath scanning) and the engine gives
+up. Do **not** pass `-Dcucumber.features=...`. The suite discovers from the
+classpath, so narrow a run by tag instead:
+```powershell
+mvn test -Dcucumber.filter.tags="@api-smoke"
+```
+The tag filter is wired through `maven-surefire-plugin` as a
+`configurationParameters` entry, because Cucumber's JUnit Platform engine reads its
+settings as JUnit configuration parameters rather than plain system properties.
+
+**Tag filter has no effect / everything is skipped**
+Same cause as above: the filter must reach the engine through surefire's
+`configurationParameters`, which `pom.xml` sets from the `cucumber.filter.tags`
+property (empty by default, meaning "run everything").
+
 **API tests fail with 429**
 Only relevant if you switch `API_BASE_URL` to `reqres.in`, which allows **40 anonymous requests per day per IP**. The framework detects this and fails with an explicit message, since it is an environment limit rather than a test defect. Fix: register a free key at [reqres.in](https://app.reqres.in/sign-up), set `API_KEY`, or wait for the daily reset (midnight UTC). The default target (`jsonplaceholder`) has no such quota.
 
