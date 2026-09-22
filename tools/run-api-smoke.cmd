@@ -1,12 +1,12 @@
 @echo off
 REM ---------------------------------------------------------------------------
-REM Runs the API layer smoke check against jsonplaceholder.typicode.com.
+REM Runs only the API scenarios.
 REM
-REM Use this when reqres.in is rate limited (HTTP 429): it proves the API layer
-REM itself works - real HTTP, status codes, JSON parsing - against a target with
-REM no daily quota.
+REM The default API target needs no key and has no daily quota, so this is a fast
+REM (browser-free) way to check the HTTP layer in isolation.
 REM
 REM   tools\run-api-smoke.cmd
+REM	tools\run-api-smoke.cmd @smoke     (only @smoke scenarios)
 REM ---------------------------------------------------------------------------
 setlocal
 
@@ -23,8 +23,9 @@ if exist "mvnw.cmd" set "MVN_CMD=mvnw.cmd"
 REM Narrow the run with TAGS, not with -Dcucumber.features. Setting the features
 REM property makes Cucumber ignore the suite's classpath discovery and fail with
 REM "TestEngine with ID 'cucumber' failed to discover tests".
-call %MVN_CMD% -B test ^
-  -Dcucumber.filter.tags="@api-smoke" ^
-  -DAPI_BASE_URL=https://jsonplaceholder.typicode.com
+set "TAGS=@api"
+if not "%~1"=="" set "TAGS=@api and %~1"
+
+call %MVN_CMD% -B test -Dcucumber.filter.tags="%TAGS%"
 
 endlocal
