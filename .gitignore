@@ -11,10 +11,12 @@ out/
 # --- Test artifacts ---------------------------------------------------------
 test-results/
 playwright-report/
-target/artifacts/
 *.png
 *.zip
 *.webm
+
+# Extent Reports output lives under target/extent-report/ and target/retry/,
+# both of which are already covered by the target/ rule above.
 
 # --- IDE --------------------------------------------------------------------
 .idea/

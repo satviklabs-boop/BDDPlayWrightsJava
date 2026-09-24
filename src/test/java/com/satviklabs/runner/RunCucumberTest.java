@@ -28,7 +28,14 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_P
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, "
         + "html:target/cucumber-report.html, "
         + "json:target/cucumber-report.json, "
-        + "junit:target/TEST-cucumber.xml")
+        + "junit:target/TEST-cucumber.xml, "
+        // Extent Reports: the adapter consumes the normal Gherkin events, so
+        // there is no custom listener to maintain. The ":target/extent-report"
+        // suffix is an output DIRECTORY and is mandatory - Cucumber aborts the
+        // whole run with "You must supply an output argument" without it.
+        // Styling (title, theme, screenshots) comes from extent.properties on
+        // the test class path.
+        + "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:target/extent-report")
 @ConfigurationParameter(key = PLUGIN_PUBLISH_QUIET_PROPERTY_NAME, value = "true")
 public class RunCucumberTest {
 

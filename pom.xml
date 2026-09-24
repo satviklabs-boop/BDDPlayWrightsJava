@@ -29,6 +29,15 @@
         <gson.version>2.11.0</gson.version>
         <!-- Empty means "run all scenarios". Override with -Dcucumber.filter.tags="@smoke". -->
         <cucumber.filter.tags></cucumber.filter.tags>
+        <!-- Retry analyser: run failed scenarios again before declaring a failure. -->
+        <RETRY_ENABLED>true</RETRY_ENABLED>
+        <RETRY_MAX_ATTEMPTS>1</RETRY_MAX_ATTEMPTS>
+        <RETRY_TAG_EXCLUDE>@no-retry</RETRY_TAG_EXCLUDE>
+        <RETRY_REPORT_DIR>target/retry</RETRY_REPORT_DIR>
+        <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+        <!-- Extent Reports: rich HTML dashboard, driven by the Cucumber 7 adapter. -->
+        <extentreports.version>5.1.1</extentreports.version>
+        <extentreports.adapter.version>1.14.0</extentreports.adapter.version>
     </properties>
 
     <dependencies>
@@ -96,6 +105,26 @@
             <version>${gson.version}</version>
         </dependency>
 
+        <!-- Extent Reports: the HTML dashboard itself -->
+        <dependency>
+            <groupId>com.aventstack</groupId>
+            <artifactId>extentreports</artifactId>
+            <version>${extentreports.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          Official Cucumber 7 adapter. Registering its plugin class in the
+          Cucumber plugin list is all that is needed - it writes the ExtentReport
+          from the Gherkin events, so there is no custom listener code to keep
+          in sync when Cucumber changes.
+        -->
+        <dependency>
+            <groupId>tech.grasshopper</groupId>
+            <artifactId>extentreports-cucumber7-adapter</artifactId>
+            <version>${extentreports.adapter.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -138,6 +167,17 @@
                             cucumber.filter.tags=${cucumber.filter.tags}
                         </configurationParameters>
                     </properties>
+                    <!--
+                      Forward the retry settings to the forked JVM. ConfigLoader
+                      reads system properties first, so these win over .env and
+                      config.properties and can be overridden with -DRETRY_MAX_ATTEMPTS=2.
+                    -->
+                    <systemPropertyVariables>
+                        <RETRY_ENABLED>${RETRY_ENABLED}</RETRY_ENABLED>
+                        <RETRY_MAX_ATTEMPTS>${RETRY_MAX_ATTEMPTS}</RETRY_MAX_ATTEMPTS>
+                        <RETRY_TAG_EXCLUDE>${RETRY_TAG_EXCLUDE}</RETRY_TAG_EXCLUDE>
+                        <RETRY_REPORT_DIR>${RETRY_REPORT_DIR}</RETRY_REPORT_DIR>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
 
@@ -186,5 +226,54 @@
                 <cucumber.filter.tags>@api</cucumber.filter.tags>
             </properties>
         </profile>
+
+        <!--
+          mvn -Pretry test : run the suite with the retry analyser enabled.
+
+          Failed scenarios are re-run up to RETRY_MAX_ATTEMPTS extra times.
+          A scenario that passes on a retry is reported as FLAKY; one that never
+          passes still fails the build. Retry artefacts land in target/retry/.
+
+          Override on the command line, e.g.:
+            mvn -Pretry test -DRETRY_MAX_ATTEMPTS=2
+            mvn -Pretry test "-Dcucumber.filter.tags=@regression"
+        -->
+        <profile>
+            <id>retry</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec-maven-plugin.version}</version>
+                        <configuration>
+                            <mainClass>com.satviklabs.runner.RetrySuiteRunner</mainClass>
+                            <classpathScope>test</classpathScope>
+                            <!--
+                              RetrySuiteRunner forks Maven itself, so it must run
+                              out-of-process: exec:java would share this JVM's
+                              state and the nested build could not start cleanly.
+                            -->
+                            <executable>mvn</executable>
+                            <arguments>
+                                <argument>test</argument>
+                                <argument>-Dretry.rerun=false</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
+
+
+
+

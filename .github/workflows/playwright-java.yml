@@ -50,6 +50,18 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # Extent Reports dashboard: a single self-contained HTML file (screenshots
+      # are inlined as base64), so it renders correctly straight from the
+      # downloaded artefact with no server and no sibling files.
+      - name: Upload Extent Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extent-report-java-${{ matrix.java }}
+          path: target/extent-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4

@@ -70,6 +70,31 @@ public final class ConfigLoader {
         return defaultValue;
     }
 
+    /** Typed accessors so callers never parse raw strings themselves. */
+    public static String getString(String key, String defaultValue) {
+        return get(key, defaultValue);
+    }
+
+    public static int getInt(String key, int defaultValue) {
+        String value = get(key, null);
+        if (!isNotBlank(value)) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    public static boolean getBoolean(String key, boolean defaultValue) {
+        String value = get(key, null);
+        if (!isNotBlank(value)) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value.trim());
+    }
+
     private static boolean isNotBlank(String s) {
         return s != null && !s.trim().isEmpty();
     }

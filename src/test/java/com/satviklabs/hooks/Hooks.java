@@ -71,10 +71,22 @@ public class Hooks {
         Page current = PAGE.get();
         if (scenario.isFailed() && current != null) {
             try {
+                // Attaching the URL first means the ExtentReport shows where the
+                // browser actually was when it broke, next to the screenshot.
+                scenario.log("Page URL at failure: " + current.url());
+            } catch (Exception e) {
+                log.debug("Could not read the page URL: {}", e.getMessage());
+            }
+            try {
                 LoginPage loginPage = new LoginPage(current);
                 String path = loginPage.screenshot("FAILED-" + scenario.getName())
                         .toAbsolutePath().toString();
                 log.error("Scenario failed. Screenshot saved to {}", path);
+                // The "image/png" media type is what lets the Extent Reports
+                // adapter embed this as a picture on the failing step rather
+                // than a bare line of text. extent.properties sets
+                // screenshot.mediatype=base64, so the image is inlined and
+                // survives being downloaded as a CI artefact.
                 scenario.attach(current.screenshot(), "image/png", "Failure screenshot");
             } catch (Exception e) {
                 log.warn("Could not capture failure screenshot: {}", e.getMessage());

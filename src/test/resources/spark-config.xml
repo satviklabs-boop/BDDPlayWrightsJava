@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Extent Spark reporter configuration.
+
+  Referenced by extent.reporter.spark.config in extent.properties. This is the
+  ONLY place the report title, theme and encoding can be set when using the
+  Cucumber 7 adapter; those keys are not read from extent.properties.
+
+  Note: XML comments must not contain a double hyphen, so dividers here use a
+  single line of equals signs instead.
+-->
+<extentreports>
+    <configuration>
+
+        <!-- Theme: STANDARD (light) or DARK.
+             DARK reads well on a CI dashboard; STANDARD prints better. -->
+        <theme>STANDARD</theme>
+
+        <!-- Must match the project encoding or non-ASCII text becomes mojibake. -->
+        <encoding>UTF-8</encoding>
+
+        <!-- reportName  = name shown on the dashboard
+             documentTitle = browser tab and report header -->
+        <reportName>PlayWrightJava Test Report</reportName>
+        <documentTitle>PlayWrightJava Test Report</documentTitle>
+
+        <!-- false = load assets from the CDN, keeping the HTML small.
+             Set true only if the report must render with no network access,
+             which inlines every asset and makes the file much larger. -->
+        <offlineMode>false</offlineMode>
+
+        <!-- Keep the timeline widget on the dashboard. -->
+        <timelineEnabled>true</timelineEnabled>
+
+        <!-- Dashboard widgets. Author/device views are off because this
+             framework does not set those annotations. -->
+        <enableDashboard>true</enableDashboard>
+        <enableCategoryView>true</enableCategoryView>
+        <enableTestView>true</enableTestView>
+        <enableLogsView>true</enableLogsView>
+        <enableStepsView>true</enableStepsView>
+        <enableExceptionView>true</enableExceptionView>
+        <enableAuthorView>false</enableAuthorView>
+        <enableDeviceView>false</enableDeviceView>
+
+        <!-- Status filtering is deliberately unset so every scenario appears,
+             passes included: the report is a full record of the run. -->
+
+    </configuration>
+</extentreports>
