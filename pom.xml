@@ -140,6 +140,28 @@
     </dependencies>
 
     <build>
+        <!--
+          Locators.text holds the selector store. .text is NOT a
+          default Maven resource extension, so it must be listed explicitly here
+          or it would never reach the test classpath and Locators would fail to
+          start. The first <testResource> keeps Maven's default behaviour for
+          config.properties, features/**, logback-test.xml, etc.
+        -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <excludes>
+                    <exclude>Locators.text</exclude>
+                </excludes>
+            </testResource>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <includes>
+                    <include>Locators.text</include>
+                </includes>
+            </testResource>
+        </testResources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
