@@ -4,6 +4,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
+import com.microsoft.playwright.options.WaitUntilState;
 import com.satviklabs.config.ConfigLoader;
 
 import java.nio.file.Files;
@@ -29,7 +30,13 @@ public abstract class BasePage {
     /** Navigates to a path relative to the configured UI base URL. */
     public void gotoPath(String path) {
         String normalised = path.startsWith("/") ? path : "/" + path;
-        page.navigate(ConfigLoader.uiBaseUrl() + normalised);
+        // Wait only for DOMCONTENTLOADED, not the default "load" event. The
+        // framework never needs third-party subresources, and on slow public
+        // demo sites the full "load" event can exceed the 30s navigation
+        // timeout, producing spurious Background-step failures. The explicit
+        // waitForLoadState below still guarantees the DOM is ready.
+        page.navigate(ConfigLoader.uiBaseUrl() + normalised,
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 

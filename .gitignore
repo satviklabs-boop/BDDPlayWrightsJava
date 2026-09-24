@@ -35,3 +35,10 @@ desktop.ini
 
 # --- Logs -------------------------------------------------------------------
 *.log
+
+# --- Local scratch / tooling ------------------------------------------------
+# Editor backups, captured process exit codes, and locally-injected toolchains
+# (e.g. a downloaded Maven distribution) are not part of the project source.
+*.bak
+*.exit
+.tools/

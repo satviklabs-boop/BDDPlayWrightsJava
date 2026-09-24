@@ -2,12 +2,15 @@ package com.satviklabs.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.LoadState;
 import com.satviklabs.config.ConfigLoader;
+import com.satviklabs.locators.Locators;
 
 /**
  * Page object for https://the-internet.herokuapp.com/login
  *
- * All selectors are private and confined to this class.
+ * Selectors come from {@link Locators.Login} so that this class stays free of
+ * raw CSS strings and every page has a single source of truth for its DOM.
  */
 public class LoginPage extends BasePage {
 
@@ -22,12 +25,12 @@ public class LoginPage extends BasePage {
 
     public LoginPage(Page page) {
         super(page);
-        this.usernameField = page.locator("#username");
-        this.passwordField = page.locator("#password");
-        this.loginButton = page.locator("button[type='submit']");
-        this.flashMessage = page.locator("#flash");
-        this.logoutButton = page.locator("a[href='/logout']");
-        this.heading = page.locator("h2");
+        this.usernameField = page.locator(Locators.Login.USERNAME_FIELD);
+        this.passwordField = page.locator(Locators.Login.PASSWORD_FIELD);
+        this.loginButton = page.locator(Locators.Login.LOGIN_BUTTON);
+        this.flashMessage = page.locator(Locators.Login.FLASH_MESSAGE);
+        this.logoutButton = page.locator(Locators.Login.LOGOUT_BUTTON);
+        this.heading = page.locator(Locators.Login.HEADING);
     }
 
     /** Opens the login page and waits for it to be interactive. */
@@ -49,7 +52,10 @@ public class LoginPage extends BasePage {
 
     public LoginPage submit() {
         loginButton.click();
-        page.waitForLoadState();
+        // Wait for the DOM rather than the default "load" event; the latter
+        // depends on third-party subresources and is intermittently slow on
+        // the public demo host.
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         return this;
     }
 
