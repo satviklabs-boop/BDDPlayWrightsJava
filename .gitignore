@@ -23,7 +23,14 @@ playwright-report/
 *.iml
 *.ipr
 *.iws
-.vscode/
+# Ignore the contents of .vscode EXCEPT settings.json, which carries the
+# shared Cucumber step-definition navigation config (cucumber.glue).
+#
+# NOTE: the pattern is ".vscode/*" and not ".vscode/". With the trailing-slash
+# form git excludes the directory itself and cannot re-include a file inside
+# it, so the "!settings.json" negation below would silently do nothing.
+.vscode/*
+!.vscode/settings.json
 .settings/
 .classpath
 .project

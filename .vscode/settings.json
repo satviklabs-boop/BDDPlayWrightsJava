@@ -1,0 +1,17 @@
+﻿{
+  "java.compile.nullAnalysis.mode": "automatic",
+
+  // Cucumber step-definition navigation for VS Code.
+  //
+  // These settings let a Gherkin step link to the Java method that implements
+  // it, so Ctrl+Click (or F12) on a step in a .feature file jumps straight to
+  // the @Given/@When/@Then in com.satviklabs.steps.
+  //
+  // Two keys are set on purpose, one per extension:
+  //   - "cucumber.glue"              -> official "Cucumber" extension
+  //   - "cucumberautocomplete.steps" -> "Cucumber (Gherkin) Full Support"
+  // Install either one; both will resolve the same files.
+  "cucumber.glue": ["src/test/java/**/*.java"],
+  "cucumberautocomplete.steps": ["src/test/java/**/*.java"],
+  "cucumberautocomplete.syncfeatures": "src/test/resources/features/**/*.feature"
+}
