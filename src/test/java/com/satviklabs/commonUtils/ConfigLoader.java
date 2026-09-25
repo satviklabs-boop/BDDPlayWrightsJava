@@ -170,21 +170,4 @@ public final class ConfigLoader {
     public static String artifactDir() {
         return get("ARTIFACT_DIR", "target/artifacts");
     }
-
-    // ----------------------------------------------------------- locators
-
-    /**
-     * Folder holding the per-page locator CSVs, relative to the classpath root.
-     *
-     * <p>Default points at the package of the locator classes. Override to read a
-     * different set of selector files without a rebuild:
-     *
-     * <pre>
-     *   -DlocatorsFolderPath=com/satviklabs/customLocators
-     *   locatorsFolderPath=/absolute/path/to/csv
-     * </pre>
-     */
-    public static String locatorsFolderPath() {
-        return get("locatorsFolderPath", "locators");
-    }
 }

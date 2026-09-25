@@ -11,30 +11,20 @@ import java.util.Map;
 /**
  * Page object for https://the-internet.herokuapp.com/login
  *
- * Selectors come from {@code locators/login.csv}, loaded once by the static
- * block below. The page holds the resulting key/selector map and creates
- * locators on demand, so there is no list of fields to keep in step: adding a
- * selector to the CSV and using {@code locators.get("newKey")} is enough.
+ * Selectors come from {@code locators/login.csv}, loaded once into
+ * {@link #LOCATORS}. Locators are created on demand rather than held as fields,
+ * so adding a selector to the CSV needs no change here.
  *
  * <p>Playwright {@link Locator} objects are lazy handles, so creating one per
- * call costs nothing measurable and is the idiomatic usage.
+ * call is the idiomatic usage and costs nothing measurable.
  */
 public class LoginPage extends BasePage {
 
     private static final String LOGIN_PATH = "/login";
 
-    /**
-     * Loads {@code locators/login.csv} once, on first use of this class. Must be
-     * declared before {@link #LOCATORS} below - static initializers run in
-     * textual order.
-     */
-    static {
-        GenericFunctions.loadLocators("login");
-    }
-
-    /** This page's key -> selector map, loaded by the block above. */
+    /** This page's key -> selector map, read from the CSV once per JVM. */
     private static final Map<String, String> LOCATORS =
-            GenericFunctions.configureLocators("locators/login.csv");
+            GenericFunctions.loadLocators("login");
 
     public LoginPage(Page page) {
         super(page);
@@ -43,10 +33,9 @@ public class LoginPage extends BasePage {
     /**
      * Creates a locator from this page's own selector set.
      *
-     * <p>Routes through {@link GenericFunctions#get(Map, String)} rather than a
-     * raw {@code Map.get}, so a mistyped key fails immediately with the list of
-     * available keys instead of producing a null selector and a 90-second
-     * Playwright timeout with no explanation.
+     * <p>Goes through {@link GenericFunctions#get(Map, String)} so a mistyped key
+     * fails immediately with the list of available keys, rather than producing a
+     * null selector and a long Playwright timeout with no explanation.
      */
     private Locator locator(String key) {
         return page.locator(GenericFunctions.get(LOCATORS, key));

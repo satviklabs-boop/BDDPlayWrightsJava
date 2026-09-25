@@ -1,66 +1,65 @@
 package com.satviklabs.routine;
 
-import com.satviklabs.customLocators.AccountLocators;
-import com.satviklabs.customLocators.CustomerLocators;
-import com.satviklabs.customLocators.LoginLocators;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Pins the selectors loaded from {@code src/test/resources/locators/*.csv}.
+ * Pins the selectors in {@code src/test/resources/locators/*.csv}.
  *
- * <p>These are the exact values the framework shipped before the locators moved
- * out of {@code src/main/java/com/satviklabs/customLocators}, so this test is the
- * behaviour-preservation check for that move: if a selector is edited or a CSV
- * stops being packaged, this fails loudly instead of the UI suite timing out.
+ * <p>These are the values the framework shipped before the locators moved, so
+ * this is the behaviour-preservation check for that work: if a selector is edited
+ * or a CSV stops being packaged, this fails loudly here instead of the UI suite
+ * timing out 90 seconds later on an element that never appears.
  *
- * <p>It also covers the two failure modes that used to be silent - a class that
- * never ran its static block, and a typo'd key.
+ * <p>Also covers the failure modes that used to be silent: a missing key, an
+ * absent file, and a malformed row.
  */
 class LocatorLoadingTest {
 
+    private static final Map<String, String> LOGIN = GenericFunctions.loadLocators("login");
+    private static final Map<String, String> ACCOUNT = GenericFunctions.loadLocators("account");
+    private static final Map<String, String> CUSTOMER = GenericFunctions.loadLocators("customer");
+
     @Test
-    void loginLocatorsMatchTheOriginalCsv() {
-        assertThat(LoginLocators.USERNAME_FIELD).isEqualTo("#username");
-        assertThat(LoginLocators.PASSWORD_FIELD).isEqualTo("#password");
-        assertThat(LoginLocators.LOGIN_BUTTON).isEqualTo("button[type='submit']");
-        assertThat(LoginLocators.FLASH_MESSAGE).isEqualTo("#flash");
-        assertThat(LoginLocators.LOGOUT_BUTTON).isEqualTo("a[href='/logout']");
-        assertThat(LoginLocators.HEADING).isEqualTo("h2");
+    void loginCsvHasTheExpectedSelectors() {
+        assertThat(LOGIN).containsOnly(
+                Map.entry("usernamefield", "#username"),
+                Map.entry("passwordfield", "#password"),
+                Map.entry("loginbutton", "button[type='submit']"),
+                Map.entry("flashmessage", "#flash"),
+                Map.entry("logoutbutton", "a[href='/logout']"),
+                Map.entry("heading", "h2"));
     }
 
     @Test
-    void accountLocatorsMatchTheOriginalCsv() {
-        assertThat(AccountLocators.PAGE_HEADING).isEqualTo("h1.accounts-title");
-        assertThat(AccountLocators.CREATE_BUTTON)
-                .isEqualTo("button[data-test='create-account']");
-        assertThat(AccountLocators.ACCOUNTS_TABLE).isEqualTo("table#accounts");
-        assertThat(AccountLocators.ACCOUNT_ROW).isEqualTo("table#accounts tbody tr");
-        assertThat(AccountLocators.CREATE_ACCOUNT_BUTTON)
-                .isEqualTo("button[data-test='create-account']");
+    void accountCsvHasTheExpectedSelectors() {
+        assertThat(ACCOUNT).containsOnly(
+                Map.entry("pageheading", "h1.accounts-title"),
+                Map.entry("createbutton", "button[data-test='create-account']"),
+                Map.entry("accountstable", "table#accounts"),
+                Map.entry("accountrow", "table#accounts tbody tr"),
+                Map.entry("createaccountbutton", "button[data-test='create-account']"));
     }
 
     @Test
-    void customerLocatorsMatchTheOriginalCsv() {
-        assertThat(CustomerLocators.PAGE_HEADING).isEqualTo("h1.customers-title");
-        assertThat(CustomerLocators.SEARCH_BOX)
-                .isEqualTo("input[data-test='customer-search']");
-        assertThat(CustomerLocators.ADD_BUTTON)
-                .isEqualTo("button[data-test='add-customer']");
-        assertThat(CustomerLocators.CUSTOMER_ROW).isEqualTo("table#customers tbody tr");
-        assertThat(CustomerLocators.EDIT_ROW_BUTTON)
-                .isEqualTo("button[data-test='edit-customer']");
-        assertThat(CustomerLocators.DELETE_ROW_BUTTON)
-                .isEqualTo("button[data-test='delete-customer']");
+    void customerCsvHasTheExpectedSelectors() {
+        assertThat(CUSTOMER).containsOnly(
+                Map.entry("pageheading", "h1.customers-title"),
+                Map.entry("searchbox", "input[data-test='customer-search']"),
+                Map.entry("addbutton", "button[data-test='add-customer']"),
+                Map.entry("customerrow", "table#customers tbody tr"),
+                Map.entry("editrowbutton", "button[data-test='edit-customer']"),
+                Map.entry("deleterowbutton", "button[data-test='delete-customer']"));
     }
 
-    /** Pages stay isolated: a key from another page's CSV is not reachable. */
+    /** Each page has its own map, so a key from another page is not reachable. */
     @Test
-    void eachPageSeesOnlyItsOwnCsv() {
-        assertThatThrownBy(() -> GenericFunctions.get(
-                GenericFunctions.configureLocators("locators/login.csv"), "pageHeading"))
+    void pagesAreIsolatedFromEachOther() {
+        assertThatThrownBy(() -> GenericFunctions.get(LOGIN, "pageHeading"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Missing locator 'pageHeading'");
     }
@@ -68,25 +67,35 @@ class LocatorLoadingTest {
     @Test
     void unknownKeyFailsFastWithTheAvailableKeys() {
         // Keys are normalised to lower case, so the "available keys" list is too.
-        assertThatThrownBy(() -> GenericFunctions.get(
-                GenericFunctions.configureLocators("locators/login.csv"), "noSuchKey"))
+        assertThatThrownBy(() -> GenericFunctions.get(LOGIN, "noSuchKey"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("noSuchKey")
                 .hasMessageContaining("usernamefield");
     }
 
     @Test
-    void missingCsvFailsWithTheExpectedPath() {
-        assertThatThrownBy(() -> GenericFunctions.configureLocators("locators/doesNotExist.csv"))
+    void missingFileFailsWithTheExpectedPath() {
+        assertThatThrownBy(() -> GenericFunctions.loadLocators("doesNotExist"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("locators/doesNotExist.csv");
     }
 
+    /** A null map means the page never loaded its CSV - worth a clear message. */
+    @Test
+    void nullMapFailsFast() {
+        assertThatThrownBy(() -> GenericFunctions.get(null, "usernameField"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Locator map is null");
+    }
+
     @Test
     void keysAreCaseInsensitiveAndTrimmed() {
-        assertThat(GenericFunctions.get(
-                GenericFunctions.configureLocators("locators/login.csv"),
-                "  USERNAMEfield  "))
-                .isEqualTo("#username");
+        assertThat(GenericFunctions.get(LOGIN, "  USERNAMEfield  ")).isEqualTo("#username");
+    }
+
+    /** The same page name returns the same map, so a CSV is parsed once per JVM. */
+    @Test
+    void repeatedLoadsAreCached() {
+        assertThat(GenericFunctions.loadLocators("login")).isSameAs(LOGIN);
     }
 }

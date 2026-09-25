@@ -13,11 +13,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Shared helper routines. Currently this is the locator loader.
+ * Loads a page's selectors from a CSV file on the classpath.
  *
- * <h2>How to use it</h2>
+ * <h2>The files</h2>
  *
- * <p>Locator CSVs live in {@code src/test/resources/locators/}, one per screen:
+ * <p>One CSV per screen, in {@code src/test/resources/locators/}:
  *
  * <pre>
  *   locators/login.csv
@@ -25,28 +25,35 @@ import java.util.concurrent.ConcurrentHashMap;
  *   locators/customer.csv
  * </pre>
  *
- * <p>Each row is {@code key,selector}. Rows starting with {@code #} are
- * comments, and only the first comma separates key from selector, so a selector
- * may itself contain commas:
+ * <p>Each row is {@code key,selector}. Blank lines and rows starting with
+ * {@code #} are ignored. Only the first comma separates key from selector, so a
+ * selector may itself contain commas. Keys are matched case-insensitively.
  *
  * <pre>
  *   usernameField,#username
  *   loginButton,button[type='submit']
  * </pre>
  *
- * <p>A page's locator class loads its CSV once in a static block and exposes the
- * values as plain constants, so a renamed key fails at compile time rather than
- * as a Playwright timeout:
+ * <h2>Using it</h2>
+ *
+ * <p>A page object loads its CSV once into a static field and looks selectors up
+ * by key:
  *
  * <pre>
- *   public final class LoginLocators {
- *       static {
- *           GenericFunctions.loadLocators("login");
+ *   public class LoginPage extends BasePage {
+ *
+ *       private static final Map&lt;String, String&gt; LOCATORS =
+ *               GenericFunctions.loadLocators("login");
+ *
+ *       private Locator usernameField() {
+ *           return page.locator(GenericFunctions.get(LOCATORS, "usernameField"));
  *       }
- *       public static final String USERNAME_FIELD =
- *               GenericFunctions.get("usernameField");
  *   }
  * </pre>
+ *
+ * <p>Both lookups throw with the list of available keys when a key is missing, so
+ * a typo fails immediately instead of as a 90-second Playwright timeout on a
+ * selector that quietly matched nothing.
  */
 public final class GenericFunctions {
 
@@ -55,130 +62,57 @@ public final class GenericFunctions {
 
     private static final String FILE_SUFFIX = ".csv";
 
-    /**
-     * Overrides {@link #LOCATORS_FOLDER}. Set with
-     * {@code -DlocatorsFolderPath=...} to point at a folder of CSVs outside the
-     * jar, e.g. to hot-fix a selector on a CI box without a rebuild.
-     */
-    private static final String FOLDER_PROPERTY = "locatorsFolderPath";
-
-    /** file name -> parsed key/selector map. Read once per JVM. */
+    /** file path -> parsed key/selector map. Each CSV is read once per JVM. */
     private static final Map<String, Map<String, String>> CACHE = new ConcurrentHashMap<>();
-
-    /**
-     * caller class name -> the map that class loaded.
-     *
-     * <p>Keyed by the <em>calling class</em>, which is what makes
-     * {@link #get(String)} deterministic: a page resolves against its own CSV
-     * and can never read another page's selectors.
-     */
-    private static final Map<String, Map<String, String>> LOADED = new ConcurrentHashMap<>();
 
     private GenericFunctions() {
     }
 
     /**
-     * Reads {@code locators/<name>.csv} and binds it to the calling class.
+     * Reads {@code locators/<pageName>.csv} and returns its key/selector map.
      *
-     * <p>Call once from the static initializer of a page's locator class:
-     *
-     * <pre>
-     *   static {
-     *       loadLocators("login");
-     *   }
-     * </pre>
-     *
-     * <p>The binding is per calling class, so {@code LoginLocators} calling
-     * {@code loadLocators("login")} and {@code AccountLocators} calling
-     * {@code loadLocators("account")} each see only their own selectors. Put the
-     * block <em>above</em> the constants that use it - static initializers run in
-     * textual order.
-     *
-     * @param locatorName the CSV base name, e.g. {@code "login"} for
-     *                    {@code locators/login.csv}
-     * @return this page's key/selector map, so a page object can hold one
-     *         reference and look up any of its own selectors, e.g.
-     *         {@code LOCATORS.get("usernameField")}
-     * @throws IllegalStateException when the CSV is absent, empty or malformed
-     */
-    public static Map<String, String> loadLocators(String locatorName) {
-        if (isBlank(locatorName)) {
-            throw new IllegalStateException("Locator name must not be empty");
-        }
-        Map<String, String> locators = configureLocators(
-                folderPath() + "/" + locatorName.trim() + FILE_SUFFIX);
-        LOADED.put(callerClassName(), locators);
-        return locators;
-    }
-
-    /**
-     * Reads a locator CSV and returns its {@code key,selector} map.
-     *
-     * <p>This is the file-reading half of the API: it takes a path relative to
-     * the classpath root and does no binding, so it can be used for a sheet that
-     * is not tied to one page. Most callers want {@link #loadLocators(String)},
-     * which derives the path and binds the result.
-     *
-     * <p>The result is parsed once per JVM and cached, so repeated calls for the
-     * same file cost a map lookup.
+     * <p>Assign it to a static field, once per page:
      *
      * <pre>
-     *   Map&lt;String, String&gt; login =
-     *           configureLocators("locators/login.csv");
+     *   private static final Map&lt;String, String&gt; LOCATORS =
+     *           GenericFunctions.loadLocators("login");
      * </pre>
      *
-     * @param csvPath path relative to the classpath root, e.g.
-     *                {@code "locators/login.csv"}; a leading {@code /} is
-     *                optional
+     * <p>The file is parsed once per JVM, so this and repeated calls for the same
+     * page cost a map lookup.
+     *
+     * @param pageName the CSV base name, e.g. {@code "login"} for
+     *                 {@code locators/login.csv}
+     * @return the page's key -&gt; selector map
      * @throws IllegalStateException when the file is absent, empty or malformed
      */
-    public static Map<String, String> configureLocators(String csvPath) {
-        if (isBlank(csvPath)) {
-            throw new IllegalStateException("Locator file path must not be empty");
+    public static Map<String, String> loadLocators(String pageName) {
+        if (isBlank(pageName)) {
+            throw new IllegalStateException("Locator page name must not be empty");
         }
-        String fileName = csvPath.trim().replace('\\', '/');
-        return CACHE.computeIfAbsent(fileName, GenericFunctions::read);
+        String path = LOCATORS_FOLDER + "/" + pageName.trim() + FILE_SUFFIX;
+        return CACHE.computeIfAbsent(path, GenericFunctions::read);
     }
 
     /**
-     * Looks up a selector in the calling class's own loaded CSV.
+     * Looks up one selector in a loaded page map.
      *
      * <pre>
-     *   public static final String USERNAME_FIELD = get("usernameField");
+     *   String selector = GenericFunctions.get(LOCATORS, "usernameField");
      * </pre>
      *
-     * @param key the CSV key, e.g. {@code "usernameField"}
-     * @throws IllegalStateException when the calling class has not run
-     *                               {@link #loadLocators(String)} yet, or the key
-     *                               is absent - so a typo surfaces immediately
-     *                               instead of as a Playwright timeout
-     */
-    public static String get(String key) {
-        String caller = callerClassName();
-        Map<String, String> pageLocators = LOADED.get(caller);
-        if (pageLocators == null) {
-            throw new IllegalStateException(
-                    "No locators loaded for " + caller + ". Add a static block "
-                            + "above the constants that use it:\n"
-                            + "    static { GenericFunctions.loadLocators(\"<name>\"); }");
-        }
-        return get(pageLocators, key);
-    }
-
-    /**
-     * Looks up one selector from an explicit page map.
-     *
-     * <pre>
-     *   String selector = GenericFunctions.get(locators, "usernameField");
-     * </pre>
-     *
-     * @throws IllegalStateException when the map is null or the key is absent
+     * @param pageLocators a map from {@link #loadLocators(String)}
+     * @param key          the CSV key, e.g. {@code "usernameField"}
+     * @return the selector for that key
+     * @throws IllegalStateException when the map is null or the key is absent, so
+     *                               a typo surfaces immediately instead of as a
+     *                               Playwright timeout
      */
     public static String get(Map<String, String> pageLocators, String key) {
         if (pageLocators == null) {
             throw new IllegalStateException(
-                    "Locator map is null - was loadLocators(...) run in the static "
-                            + "initializer of this page's locator class?");
+                    "Locator map is null - was GenericFunctions.loadLocators(...) "
+                            + "assigned to a static field?");
         }
         String selector = pageLocators.get(normalise(key));
         if (selector == null || selector.isEmpty()) {
@@ -189,22 +123,6 @@ public final class GenericFunctions {
         return selector;
     }
 
-    /**
-     * The calling class: the first frame outside this class on the stack.
-     *
-     * <p>This is what binds a {@link #loadLocators(String)} call to the class
-     * that made it, so {@link #get(String)} is a plain, deterministic map lookup
-     * with no guessing about which page a key belongs to.
-     */
-    private static String callerClassName() {
-        return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
-                .walk(frames -> frames
-                        .filter(f -> !GenericFunctions.class.equals(f.getDeclaringClass()))
-                        .map(f -> f.getDeclaringClass().getName())
-                        .findFirst()
-                        .orElse(GenericFunctions.class.getName()));
-    }
-
     private static String normalise(String key) {
         return key == null ? "" : key.trim().toLowerCase(Locale.ROOT);
     }
@@ -213,29 +131,7 @@ public final class GenericFunctions {
         return s == null || s.trim().isEmpty();
     }
 
-    /**
-     * Folder holding the CSVs, from {@code -DlocatorsFolderPath=...} or
-     * {@code locatorsFolderPath} as an environment variable, defaulting to
-     * {@link #LOCATORS_FOLDER}.
-     */
-    private static String folderPath() {
-        String value = System.getProperty(FOLDER_PROPERTY);
-        if (isBlank(value)) {
-            value = System.getenv(FOLDER_PROPERTY);
-        }
-        return isBlank(value)
-                ? LOCATORS_FOLDER
-                : value.trim().replace('\\', '/');
-    }
-
-    /**
-     * Resolves and parses one CSV from the classpath.
-     *
-     * @param csvPath path relative to the classpath root, e.g.
-     *                {@code locators/login.csv}; the {@code locatorsFolderPath}
-     *                override is applied when the caller used
-     *                {@link #loadLocators(String)}, not here
-     */
+    /** Resolves and parses one CSV from the classpath. */
     private static Map<String, String> read(String csvPath) {
         String resource = csvPath.startsWith("/") ? csvPath : "/" + csvPath;
 
@@ -278,7 +174,8 @@ public final class GenericFunctions {
             }
         }
         if (entries.isEmpty()) {
-            throw new IllegalStateException("Locator file '" + source + "' contains no entries");
+            throw new IllegalStateException(
+                    "Locator file '" + source + "' contains no entries");
         }
     }
 }
