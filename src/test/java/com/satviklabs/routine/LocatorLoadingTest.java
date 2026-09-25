@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Pins the selectors loaded from {@code src/main/resources/locators/*.csv}.
+ * Pins the selectors loaded from {@code src/test/resources/locators/*.csv}.
  *
  * <p>These are the exact values the framework shipped before the locators moved
  * out of {@code src/main/java/com/satviklabs/customLocators}, so this test is the

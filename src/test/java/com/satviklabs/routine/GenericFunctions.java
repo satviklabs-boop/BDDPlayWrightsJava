@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h2>How to use it</h2>
  *
- * <p>Locator CSVs live in {@code src/main/resources/locators/}, one per screen:
+ * <p>Locator CSVs live in {@code src/test/resources/locators/}, one per screen:
  *
  * <pre>
  *   locators/login.csv
@@ -225,7 +225,7 @@ public final class GenericFunctions {
                 throw new IllegalStateException(
                         "Locator file '" + fileName + "' not found on the classpath "
                                 + "as '" + resource + "'. Expected it in "
-                                + "src/main/resources/" + folderPath() + "/.");
+                                + "src/test/resources/" + folderPath() + "/.");
             }
             Map<String, String> entries = new LinkedHashMap<>();
             parse(in, resource, entries);

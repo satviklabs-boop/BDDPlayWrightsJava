@@ -141,7 +141,7 @@
 
     <build>
         <!--
-          The per-page locator CSVs live in src/main/resources/locators/ - a
+          The per-page locator CSVs live in src/test/resources/locators/ - a
           Maven default resource root - and src/test/resources is the default
           test resource root. Both are copied onto the classpath automatically,
           so no custom <resources> or <testResources> entries are needed.
