@@ -54,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class LoadLocators {
 
-    /** Page names accepted by {@link #ctors(String)}. */
+    /** Page names accepted by {@link #loadLocators(String)}. */
     public static final class Element {
 
         public static final String LOGIN = "Login";
@@ -77,6 +77,9 @@ public class LoadLocators {
 
     /** csv file name -> its parsed key/selector map. Read once per JVM. */
     private static final Map<String, Map<String, String>> CACHE = new ConcurrentHashMap<>();
+
+    /** page class name -> that page's own selectors, set by its static block. */
+    private static final Map<String, Map<String, String>> PER_CLASS = new ConcurrentHashMap<>();
 
     /** Extendable only so page classes can write {@code class By extends LoadLocators}. */
     protected LoadLocators() {
@@ -125,18 +128,82 @@ public class LoadLocators {
     }
 
     /**
-     * Reads the CSV belonging to {@code page} and returns its key -&gt; selector map.
+     * Loads the CSV named {@code page} for the calling page class.
      *
-     * <p>Each page owns exactly one CSV and one loader: there is no sharing and no
-     * cache-key aliasing, so a page can only ever read its own file. Account reads
-     * {@code reads_CustomAccount.csv}, Customer reads {@code reads_CustomCustomer.csv} -
-     * never each other's. If two screens genuinely need the same selectors, the
-     * selector is duplicated in both files rather than the files being merged, so
-     * editing one screen can never silently change another.
+     * <p>Called from a page class's static block, exactly as in the reference
+     * project:
+     *
+     * <pre>
+     *   public class Login extends LoadLocators {
+     *       static {
+     *           loadLocators("Login");
+     *       }
+     *   }
+     * </pre>
+     *
+     * <p>Unlike {@link #ctors(String)}, which hands the map back to the caller, this
+     * stores it against the <em>calling class</em>. That is what keeps pages
+     * separate: {@code Login} calling {@code loadLocators("Login")} and
+     * {@code Account} calling {@code loadLocators("Account")} each end up with their
+     * own map, and {@link #get(String)} only ever sees the caller's own selectors.
+     * A single shared global would let any page read any other page's CSV.
+     *
+     * <p>The caller is identified by {@link StackWalker}, so a subclass cannot
+     * accidentally overwrite its parent's (or another page's) entries.
+     *
+     * @param page the CSV base name, e.g. {@code "Login"} for
+     *             {@code reads_CustomLogin.csv}
+     * @throws IllegalStateException when the CSV is absent, empty or malformed
+     */
+    protected static void loadLocators(String page) {
+        String caller = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+                .walk(frames -> frames
+                        .filter(f -> LoadLocators.class.isAssignableFrom(f.getDeclaringClass()))
+                        .filter(f -> !LoadLocators.class.equals(f.getDeclaringClass()))
+                        .map(f -> f.getDeclaringClass().getName())
+                        .findFirst()
+                        .orElse(LoadLocators.class.getName()));
+        PER_CLASS.put(caller, ctors(page));
+    }
+
+    /**
+     * Looks up a selector in the calling class's own loaded CSV.
+     *
+     * <pre>
+     *   public static final String USERNAME_FIELD = get("usernameField");
+     * </pre>
+     *
+     * @param key the CSV key, e.g. {@code "usernameField"}
+     * @throws IllegalStateException when the page's static block did not run, or the
+     *                               key is absent - so a typo surfaces immediately
+     *                               instead of as a Playwright timeout
+     */
+    protected static String get(String key) {
+        String caller = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+                .walk(frames -> frames
+                        .filter(f -> LoadLocators.class.isAssignableFrom(f.getDeclaringClass()))
+                        .filter(f -> !LoadLocators.class.equals(f.getDeclaringClass()))
+                        .map(f -> f.getDeclaringClass().getName())
+                        .findFirst()
+                        .orElse(LoadLocators.class.getName()));
+        Map<String, String> pageLocators = PER_CLASS.get(caller);
+        if (pageLocators == null) {
+            throw new IllegalStateException(
+                    "No locators loaded for " + caller + ". Add a static block:\n"
+                            + "    static { loadLocators(\"<PageName>\"); }");
+        }
+        return get(pageLocators, key);
+    }
+
+    /**
+     * Reads the CSV belonging to {@code page} and hands the map back to the caller.
+     *
+     * <p>Prefer {@link #loadLocators(String)} from a static block; this form exists
+     * for callers that want the map directly.
      *
      * <p>The result is parsed once per JVM and cached under the page name.
      *
-     * @param page one of {@link Element}, e.g. {@link Element#LOGIN}
+     * @param page the CSV base name, e.g. {@code "Login"}
      * @throws IllegalStateException when the CSV is absent, empty or malformed
      */
     public static Map<String, String> ctors(String page) {
@@ -148,18 +215,7 @@ public class LoadLocators {
     }
 
     /**
-     * Looks up one selector in a page map, for page classes whose {@code By} inner
-     * class extends this one:
-     *
-     * <pre>
-     *   public static class By extends LoadLocators {
-     *       public static final String USERNAME_FIELD = select(LOCATORS, "usernameField");
-     *   }
-     * </pre>
-     *
-     * <p>{@code pageLocators} is the page's own {@code LOCATORS} map. Passing it
-     * explicitly - rather than reaching for a shared field - is what guarantees a
-     * page can only ever resolve keys from its own CSV.
+     * Looks up one selector in an explicit page map.
      *
      * @throws IllegalStateException when the key is absent, so a typo surfaces
      *                               immediately instead of as a Playwright timeout
