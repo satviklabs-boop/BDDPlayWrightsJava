@@ -141,39 +141,11 @@
 
     <build>
         <!--
-          The per-page locator CSVs live next to the locator classes in
-          src/main/java/com/satviklabs/customLocators/ (reads_CustomLogin.csv,
-          reads_CustomAccount.csv, reads_CustomCustomer.csv).
-
-          That folder is inside src/main/java, where Maven does NOT look for
-          resources, and .csv is not a default resource extension either - so two
-          things are needed:
-            1. register the folder as a <resource> of the main jar, and
-            2. copy it again under <testResources>, because the copy that ends up
-               inside the jar is not expanded onto Surefire's test classpath.
-          Missing either step means LoadLocators cannot find the CSV at runtime.
+          The per-page locator CSVs live in src/main/resources/locators/ - a
+          Maven default resource root - and src/test/resources is the default
+          test resource root. Both are copied onto the classpath automatically,
+          so no custom <resources> or <testResources> entries are needed.
         -->
-        <resources>
-            <resource>
-                <directory>src/main/java/com/satviklabs/customLocators</directory>
-                <includes>
-                    <include>*.csv</include>
-                </includes>
-            </resource>
-        </resources>
-        <testResources>
-            <!-- Maven's defaults for config.properties, features/**, etc. -->
-            <testResource>
-                <directory>src/test/resources</directory>
-            </testResource>
-            <testResource>
-                <directory>src/main/java/com/satviklabs/customLocators</directory>
-                <targetPath>com/satviklabs/customLocators</targetPath>
-                <includes>
-                    <include>*.csv</include>
-                </includes>
-            </testResource>
-        </testResources>
 
         <plugins>
             <plugin>
