@@ -6,8 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -59,7 +62,13 @@ public final class RetrySuiteRunner {
         Analyzer.startFreshRun();
 
         // Pass 0 - the normal, full run.
-        int exit = mvn("clean", "test", "-Dretry.rerun=false");
+        // No "clean" here: it would delete target/retry, which is exactly where
+        // the ledger from this run (and every later pass) is kept.
+        int exit = mvn("test", "-Dretry.rerun=false");
+
+        // The pass above ran in a child JVM that owns the real ledger, so pick
+        // its results up before deciding what to re-run.
+        Analyzer.reloadFromDisk();
 
         int pass = 0;
         while (pass++ < MAX_PASSES) {
@@ -79,6 +88,9 @@ public final class RetrySuiteRunner {
             int rerunExit = mvn("test",
                     "-Dretry.rerun=true",
                     "-Dcucumber.features=@" + rerunFile);
+
+            // Same story: this pass recorded its outcomes in the child, not here.
+            Analyzer.reloadFromDisk();
 
             if (rerunExit == 0) {
                 exit = 0;
@@ -107,18 +119,43 @@ public final class RetrySuiteRunner {
         System.exit(0);
     }
 
+    /**
+     * Runs Maven in a child process and waits for it.
+     *
+     * The executable is taken from the mvn.executable system property when set,
+     * otherwise the wrapper checked out next to the project is preferred over a
+     * bare "mvn" - plenty of machines (including CI containers) have the wrapper
+     * but no global Maven on PATH, and a bare "mvn" would fail there.
+     */
     private static int mvn(String... goals) throws Exception {
         List<String> command = new ArrayList<>();
-        String mvnExecutable = isWindows() ? "mvn.cmd" : "mvn";
-        command.add(mvnExecutable);
-        for (String goal : goals) {
-            command.add(goal);
-        }
+        command.add(mavenExecutable());
+        command.addAll(Arrays.asList(goals));
         log.debug("Executing: {}", String.join(" ", command));
 
         ProcessBuilder builder = new ProcessBuilder(command).inheritIO();
         Process process = builder.start();
         return process.waitFor();
+    }
+
+    private static String mavenExecutable() {
+        String configured = System.getProperty("mvn.executable");
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
+        if (isWindows()) {
+            return "mvn.cmd";
+        }
+        Path wrapper = projectRoot().resolve("mvnw");
+        return Files.isExecutable(wrapper) ? wrapper.toAbsolutePath().toString() : "mvn";
+    }
+
+    private static Path projectRoot() {
+        String override = System.getProperty("project.root");
+        if (override != null && !override.isBlank()) {
+            return Paths.get(override);
+        }
+        return Paths.get("").toAbsolutePath();
     }
 
     private static boolean isWindows() {

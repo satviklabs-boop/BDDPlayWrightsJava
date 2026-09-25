@@ -153,6 +153,22 @@ public final class Retry {
             return Paths.get(Config.reportDir(), "rerun.txt");
         }
 
+        /**
+         * Re-reads the ledger from disk, discarding whatever this JVM had in memory.
+         *
+         * <p>The runner drives the suite across SEPARATE Maven invocations, and the
+         * ledger is only ever written by the JVM that ran the scenarios (the child).
+         * The runner itself therefore has to pick the child's results back up from
+         * the file after each pass - without this, it would keep looking at the
+         * stale, empty state it started with and would never queue a single rerun.
+         */
+        public static synchronized void reloadFromDisk() {
+            LEDGER.clear();
+            loaded = false;
+            ensureLoaded();
+            log.debug("Retry ledger reloaded from disk: {} entries", LEDGER.size());
+        }
+
         private static synchronized void ensureLoaded() {
             if (loaded) {
                 return;
