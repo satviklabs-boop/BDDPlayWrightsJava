@@ -60,7 +60,7 @@ class LocatorLoadingTest {
     @Test
     void eachPageSeesOnlyItsOwnCsv() {
         assertThatThrownBy(() -> GenericFunctions.get(
-                GenericFunctions.ctors("login"), "pageHeading"))
+                GenericFunctions.configureLocators("locators/login.csv"), "pageHeading"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Missing locator 'pageHeading'");
     }
@@ -69,7 +69,7 @@ class LocatorLoadingTest {
     void unknownKeyFailsFastWithTheAvailableKeys() {
         // Keys are normalised to lower case, so the "available keys" list is too.
         assertThatThrownBy(() -> GenericFunctions.get(
-                GenericFunctions.ctors("login"), "noSuchKey"))
+                GenericFunctions.configureLocators("locators/login.csv"), "noSuchKey"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("noSuchKey")
                 .hasMessageContaining("usernamefield");
@@ -77,7 +77,7 @@ class LocatorLoadingTest {
 
     @Test
     void missingCsvFailsWithTheExpectedPath() {
-        assertThatThrownBy(() -> GenericFunctions.ctors("doesNotExist"))
+        assertThatThrownBy(() -> GenericFunctions.configureLocators("locators/doesNotExist.csv"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("locators/doesNotExist.csv");
     }
@@ -85,7 +85,8 @@ class LocatorLoadingTest {
     @Test
     void keysAreCaseInsensitiveAndTrimmed() {
         assertThat(GenericFunctions.get(
-                GenericFunctions.ctors("login"), "  USERNAMEfield  "))
+                GenericFunctions.configureLocators("locators/login.csv"),
+                "  USERNAMEfield  "))
                 .isEqualTo("#username");
     }
 }

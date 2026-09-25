@@ -185,6 +185,6 @@ public final class ConfigLoader {
      * </pre>
      */
     public static String locatorsFolderPath() {
-        return get("locatorsFolderPath", "com/satviklabs/customLocators");
+        return get("locatorsFolderPath", "locators");
     }
 }

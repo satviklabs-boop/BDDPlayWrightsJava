@@ -96,32 +96,47 @@ public final class GenericFunctions {
      *
      * @param locatorName the CSV base name, e.g. {@code "login"} for
      *                    {@code locators/login.csv}
+     * @return this page's key/selector map, so a page object can hold one
+     *         reference and look up any of its own selectors, e.g.
+     *         {@code LOCATORS.get("usernameField")}
      * @throws IllegalStateException when the CSV is absent, empty or malformed
      */
-    public static void loadLocators(String locatorName) {
+    public static Map<String, String> loadLocators(String locatorName) {
         if (isBlank(locatorName)) {
             throw new IllegalStateException("Locator name must not be empty");
         }
-        LOADED.put(callerClassName(), ctors(locatorName.trim()));
+        Map<String, String> locators = configureLocators(
+                folderPath() + "/" + locatorName.trim() + FILE_SUFFIX);
+        LOADED.put(callerClassName(), locators);
+        return locators;
     }
 
     /**
-     * Reads {@code locators/<name>.csv} and returns the key/selector map.
+     * Reads a locator CSV and returns its {@code key,selector} map.
      *
-     * <p>Use this when you want the map itself, e.g. to iterate every selector
-     * for a page. Prefer {@link #loadLocators(String)} + {@link #get(String)} for
-     * the normal page-object case.
+     * <p>This is the file-reading half of the API: it takes a path relative to
+     * the classpath root and does no binding, so it can be used for a sheet that
+     * is not tied to one page. Most callers want {@link #loadLocators(String)},
+     * which derives the path and binds the result.
      *
-     * <p>The result is parsed once per JVM and cached.
+     * <p>The result is parsed once per JVM and cached, so repeated calls for the
+     * same file cost a map lookup.
      *
-     * @param locatorName the CSV base name, e.g. {@code "login"}
-     * @throws IllegalStateException when the CSV is absent, empty or malformed
+     * <pre>
+     *   Map&lt;String, String&gt; login =
+     *           configureLocators("locators/login.csv");
+     * </pre>
+     *
+     * @param csvPath path relative to the classpath root, e.g.
+     *                {@code "locators/login.csv"}; a leading {@code /} is
+     *                optional
+     * @throws IllegalStateException when the file is absent, empty or malformed
      */
-    public static Map<String, String> ctors(String locatorName) {
-        if (isBlank(locatorName)) {
-            throw new IllegalStateException("Locator name must not be empty");
+    public static Map<String, String> configureLocators(String csvPath) {
+        if (isBlank(csvPath)) {
+            throw new IllegalStateException("Locator file path must not be empty");
         }
-        String fileName = locatorName.trim() + FILE_SUFFIX;
+        String fileName = csvPath.trim().replace('\\', '/');
         return CACHE.computeIfAbsent(fileName, GenericFunctions::read);
     }
 
@@ -213,19 +228,23 @@ public final class GenericFunctions {
                 : value.trim().replace('\\', '/');
     }
 
-    /** Resolves and parses one CSV from the classpath. */
-    private static Map<String, String> read(String fileName) {
-        String resource = folderPath() + "/" + fileName;
-        if (!resource.startsWith("/")) {
-            resource = "/" + resource;
-        }
+    /**
+     * Resolves and parses one CSV from the classpath.
+     *
+     * @param csvPath path relative to the classpath root, e.g.
+     *                {@code locators/login.csv}; the {@code locatorsFolderPath}
+     *                override is applied when the caller used
+     *                {@link #loadLocators(String)}, not here
+     */
+    private static Map<String, String> read(String csvPath) {
+        String resource = csvPath.startsWith("/") ? csvPath : "/" + csvPath;
 
         try (InputStream in = GenericFunctions.class.getResourceAsStream(resource)) {
             if (in == null) {
                 throw new IllegalStateException(
-                        "Locator file '" + fileName + "' not found on the classpath "
+                        "Locator file '" + csvPath + "' not found on the classpath "
                                 + "as '" + resource + "'. Expected it in "
-                                + "src/test/resources/" + folderPath() + "/.");
+                                + "src/test/resources/" + csvPath + ".");
             }
             Map<String, String> entries = new LinkedHashMap<>();
             parse(in, resource, entries);
