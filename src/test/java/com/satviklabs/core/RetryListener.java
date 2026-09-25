@@ -1,5 +1,7 @@
-package com.satviklabs.baseClasses;
+package com.satviklabs.core;
 
+import com.satviklabs.core.Retry.Analyzer;
+import com.satviklabs.core.Retry.Config;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.TestExecutionListener;
 import org.junit.platform.launcher.TestIdentifier;
@@ -13,7 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * JUnit Platform listener that feeds every scenario outcome into the
- * {@link RetryAnalyzer}.
+ * {@link Analyzer}.
+ *
+ * <p>It is a top-level class rather than a nested class of {@link Retry} because
+ * the JUnit Platform only auto-registers listeners that the ServiceLoader can
+ * name as a fully-qualified top-level class.
  *
  * It listens at the TEST level only (Cucumber emits one TEST descriptor per
  * scenario) and ignores the engine/suite descriptors, so the ledger counts
@@ -33,7 +39,7 @@ public class RetryListener implements TestExecutionListener {
     @Override
     public void testPlanExecutionStarted(TestPlan testPlan) {
         log.debug("Retry listener attached (retry pass = {}, retry active = {})",
-                RetryAnalyzer.isRetryPass(), RetryConfig.active());
+                Analyzer.isRetryPass(), Config.active());
     }
 
     @Override
@@ -47,13 +53,13 @@ public class RetryListener implements TestExecutionListener {
             return;
         }
         boolean failed = testExecutionResult.getStatus() == TestExecutionResult.Status.FAILED;
-        RetryAnalyzer.record(key, failed, isExcluded(testIdentifier));
+        Analyzer.record(key, failed, isExcluded(testIdentifier));
     }
 
     @Override
     public void testPlanExecutionFinished(TestPlan testPlan) {
-        RetryAnalyzer.flush();
-        RetryAnalyzer.logSummary();
+        Analyzer.flush();
+        Analyzer.logSummary();
     }
 
     /**
@@ -78,6 +84,6 @@ public class RetryListener implements TestExecutionListener {
         Set<String> tags = testIdentifier.getTags().stream()
                 .map(tag -> tag.getName())
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-        return RetryAnalyzer.isExcluded(tags);
+        return Analyzer.isExcluded(tags);
     }
 }

@@ -1,6 +1,6 @@
 package com.satviklabs.runner;
 
-import com.satviklabs.baseClasses.Hooks;
+import com.satviklabs.core.Providers.Hooks;
 import org.junit.platform.suite.api.ConfigurationParameter;
 import org.junit.platform.suite.api.IncludeEngines;
 import org.junit.platform.suite.api.SelectClasspathResource;
@@ -24,7 +24,7 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_P
 @Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
-@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.satviklabs.stepDefinitions,com.satviklabs.hooks")
+@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.satviklabs.stepDefinitions,com.satviklabs.core")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, "
         + "html:target/cucumber-report.html, "
         + "json:target/cucumber-report.json, "

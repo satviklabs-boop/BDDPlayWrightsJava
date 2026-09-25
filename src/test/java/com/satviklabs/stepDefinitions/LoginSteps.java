@@ -1,6 +1,6 @@
 package com.satviklabs.stepDefinitions;
 
-import com.satviklabs.baseClasses.Hooks;
+import com.satviklabs.core.Providers.Hooks;
 import com.satviklabs.pages.LoginPage;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;

@@ -1,7 +1,7 @@
 package com.satviklabs.runner;
 
-import com.satviklabs.baseClasses.RetryAnalyzer;
-import com.satviklabs.baseClasses.RetryConfig;
+import com.satviklabs.core.Retry.Analyzer;
+import com.satviklabs.core.Retry.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +32,7 @@ import java.util.Set;
  * -------------------
  * A normal run discovers features from the classpath. On a retry pass we want
  * ONLY the failed scenarios, and Cucumber supports that natively through a
- * rerun file (@path), which is what RetryAnalyzer writes to target/retry/rerun.txt.
+ * rerun file (@path), which is what the retry analyser writes to target/retry/rerun.txt.
  * Setting cucumber.features is safe there because that pass is defined entirely
  * by the rerun file - nothing else should be discovered.
  */
@@ -47,29 +47,29 @@ public final class RetrySuiteRunner {
     }
 
     public static void main(String[] args) throws Exception {
-        if (!RetryConfig.active()) {
+        if (!Config.active()) {
             log.info("Retry analyser disabled (RETRY_MAX_ATTEMPTS) - running once");
             int code = mvn("clean", "test", "-Dretry.rerun=false");
             System.exit(code);
         }
 
         log.info("Retry analyser: up to {} extra attempt(s) per failed scenario",
-                RetryConfig.maxAttempts());
+                Config.maxAttempts());
 
-        RetryAnalyzer.startFreshRun();
+        Analyzer.startFreshRun();
 
         // Pass 0 - the normal, full run.
         int exit = mvn("clean", "test", "-Dretry.rerun=false");
 
         int pass = 0;
         while (pass++ < MAX_PASSES) {
-            Set<String> queued = RetryAnalyzer.scenariosToRerun();
+            Set<String> queued = Analyzer.scenariosToRerun();
             if (queued.isEmpty()) {
                 break;
             }
             log.warn("Retry pass {}: re-running {} scenario(s)", pass, queued.size());
 
-            String rerunFile = Paths.get(RetryConfig.reportDir(), "rerun.txt")
+            String rerunFile = Paths.get(Config.reportDir(), "rerun.txt")
                     .toAbsolutePath().toString();
 
             // Cucumber natively accepts a rerun file via the junit platform
@@ -86,8 +86,8 @@ public final class RetrySuiteRunner {
         }
 
         // Determine the true outcome: only scenarios whose attempts are used up.
-        List<String> stillFailing = RetryAnalyzer.stillFailing();
-        List<String> flaky = RetryAnalyzer.flakyScenarios();
+        List<String> stillFailing = Analyzer.stillFailing();
+        List<String> flaky = Analyzer.flakyScenarios();
 
         log.info("=====================================================");
         log.info("Retry analyser final result");
@@ -96,10 +96,10 @@ public final class RetrySuiteRunner {
         log.info("  Still failing after all attempts : {}", stillFailing.size());
         stillFailing.forEach(s -> log.info("      FAILED {}", s));
         log.info("  Retry report: {}{}retry-report.txt",
-                RetryConfig.reportDir(), File.separator);
+                Config.reportDir(), File.separator);
         log.info("=====================================================");
 
-        RetryAnalyzer.flush();
+        Analyzer.flush();
 
         if (!stillFailing.isEmpty()) {
             System.exit(exit == 0 ? 1 : exit);

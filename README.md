@@ -184,22 +184,21 @@ mvn test -Dcucumber.filter.tags="@api-smoke" -DAPI_BASE_URL=https://jsonplacehol
 PlayWrightJava/
 ├── src/test/
 │   ├── java/com/satviklabs/
-│   │   ├── api/
-│   │   │   └── ApiClient.java          # HTTP wrapper (GET/POST/PUT/PATCH/DELETE)
-│   │   ├── config/
+│   │   ├── baseClasses/
 │   │   │   └── ConfigLoader.java       # Central config loader
-│   │   ├── hooks/
-│   │   │   └── Hooks.java              # Cucumber hooks + world state
+│   │   ├── core/
+│   │   │   ├── Providers.java         # PlaywrightProvider + Hooks + ApiClient
+│   │   │   ├── Retry.java             # Retry.Config + Retry.Analyzer
+│   │   │   └── RetryListener.java     # JUnit Platform listener (ServiceLoader)
 │   │   ├── pages/
 │   │   │   ├── BasePage.java           # Shared page helpers
 │   │   │   └── LoginPage.java          # Login page object
 │   │   ├── runner/
-│   │   │   └── RunCucumberTest.java    # JUnit 5 suite entry point
-│   │   ├── steps/
+│   │   │   ├── RunCucumberTest.java    # JUnit 5 suite entry point
+│   │   │   └── RetrySuiteRunner.java   # Run → analyse → rerun loop
+│   │   ├── stepDefinitions/
 │   │   │   ├── LoginSteps.java         # UI step definitions
 │   │   │   └── ApiSteps.java           # API step definitions
-│   │   └── support/
-│   │       └── PlaywrightProvider.java # Shared Playwright driver lifecycle
 │   └── resources/
 │       ├── features/
 │       │   ├── ui/login.feature        # UI login scenarios
@@ -492,9 +491,9 @@ The default exclude tag is `@no-retry`; change it with `RETRY_TAG_EXCLUDE`.
 
 | Class | Responsibility |
 |---|---|
-| `RetryConfig` | Reads the `RETRY_*` settings through `ConfigLoader` |
+| `Retry.Config` | Reads the `RETRY_*` settings through `ConfigLoader` |
 | `RetryListener` | JUnit Platform listener; records each scenario outcome (auto-registered via `META-INF/services`) |
-| `RetryAnalyzer` | The ledger: attempt counts, flaky detection, rerun file, report |
+| `Retry.Analyzer` | The ledger: attempt counts, flaky detection, rerun file, report |
 | `RetrySuiteRunner` | Owns the run → analyse → rerun loop and the final exit code |
 
 ---
