@@ -148,6 +148,27 @@ public class LoadLocators {
     }
 
     /**
+     * Looks up one selector in a page map, for page classes whose {@code By} inner
+     * class extends this one:
+     *
+     * <pre>
+     *   public static class By extends LoadLocators {
+     *       public static final String USERNAME_FIELD = select(LOCATORS, "usernameField");
+     *   }
+     * </pre>
+     *
+     * <p>{@code pageLocators} is the page's own {@code LOCATORS} map. Passing it
+     * explicitly - rather than reaching for a shared field - is what guarantees a
+     * page can only ever resolve keys from its own CSV.
+     *
+     * @throws IllegalStateException when the key is absent, so a typo surfaces
+     *                               immediately instead of as a Playwright timeout
+     */
+    protected static String select(Map<String, String> pageLocators, String key) {
+        return get(pageLocators, key);
+    }
+
+    /**
      * Looks up one selector from an already-loaded page map.
      *
      * <pre>

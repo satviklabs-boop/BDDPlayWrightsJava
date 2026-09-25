@@ -5,31 +5,28 @@ import java.util.Map;
 /**
  * Locators for the login page, fed by {@code reads_CustomLogin.csv}.
  *
- * <p>
- * The static block runs once, when this class is first referenced, and reads
- * the whole CSV into {@link #locators}. Every selector fetched by {@link By}
- * then
- * delegates to {@link LoadLocators#get(Map, String)} - no per-field file
- * access.
+ * <p>{@link #LOCATORS} is read once, when this class is first used, and every
+ * selector below resolves against it. Because the map is passed explicitly to
+ * {@link LoadLocators#select(Map, String)}, this page can only ever read its own
+ * CSV - it has no way to reach another page's selectors.
  */
-public final class ByLoginLocators {
+public final class ByLoginLocators extends LoadLocators {
 
-    /** Whole Login.csv as key -&gt; selector. Loaded once by the static block. */
-    public static final Map<String, String> locators;
+    /** {@code reads_CustomLogin.csv} as key -&gt; selector. Loaded once. */
+    public static final Map<String, String> LOCATORS = ctors(Element.LOGIN);
 
-    static {
-        locators = LoadLocators.ctors(LoadLocators.Element.LOGIN);
-    }
-
-    /** Selector lookup into {@link #locators}. */
+    /** Selector lookup into {@link #LOCATORS}. */
     public static class By extends LoadLocators {
 
-        public static final String USERNAME_FIELD = get(locators, "usernameField");
-        public static final String PASSWORD_FIELD = get(locators, "passwordField");
-        public static final String LOGIN_BUTTON = get(locators, "loginButton");
-        public static final String FLASH_MESSAGE = get(locators, "flashMessage");
-        public static final String LOGOUT_BUTTON = get(locators, "logoutButton");
-        public static final String HEADING = get(locators, "heading");
+        public static final String USERNAME_FIELD = select(LOCATORS, "usernameField");
+        public static final String PASSWORD_FIELD = select(LOCATORS, "passwordField");
+        public static final String LOGIN_BUTTON = select(LOCATORS, "loginButton");
+        public static final String FLASH_MESSAGE = select(LOCATORS, "flashMessage");
+        public static final String LOGOUT_BUTTON = select(LOCATORS, "logoutButton");
+        public static final String HEADING = select(LOCATORS, "heading");
+
+        private By() {
+        }
     }
 
     private ByLoginLocators() {
