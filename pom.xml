@@ -19,9 +19,8 @@
 
         <playwright.version>1.63.0</playwright.version>
         <cucumber.version>7.20.1</cucumber.version>
-        <junit.platform.version>1.11.3</junit.platform.version>
-        <junit.jupiter.version>5.11.3</junit.jupiter.version>
-        <surefire.version>3.5.2</surefire.version>
+        <testng.version>7.10.2</testng.version>
+        <surefire.version>3.6.0</surefire.version>
         <assertj.version>3.26.3</assertj.version>
         <slf4j.version>2.0.16</slf4j.version>
         <logback.version>1.5.12</logback.version>
@@ -29,12 +28,10 @@
         <gson.version>2.11.0</gson.version>
         <!-- Empty means "run all scenarios". Override with -Dcucumber.filter.tags="@smoke". -->
         <cucumber.filter.tags></cucumber.filter.tags>
-        <!-- Retry analyser: run failed scenarios again before declaring a failure. -->
+        <!-- Retry: run failed scenarios again before declaring a failure. -->
         <RETRY_ENABLED>true</RETRY_ENABLED>
         <RETRY_MAX_ATTEMPTS>1</RETRY_MAX_ATTEMPTS>
         <RETRY_TAG_EXCLUDE>@no-retry</RETRY_TAG_EXCLUDE>
-        <RETRY_REPORT_DIR>target/retry</RETRY_REPORT_DIR>
-        <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
         <!-- Extent Reports: rich HTML dashboard, driven by the Cucumber 7 adapter. -->
         <extentreports.version>5.1.1</extentreports.version>
         <extentreports.adapter.version>1.14.0</extentreports.adapter.version>
@@ -64,24 +61,50 @@
         </dependency>
         <dependency>
             <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <artifactId>cucumber-testng</artifactId>
             <version>${cucumber.version}</version>
             <scope>test</scope>
         </dependency>
 
-        <!-- JUnit 5 Platform + Jupiter -->
+        <!--
+          TestNG drives the Cucumber suite. Chosen over the JUnit Platform
+          because IRetryAnalyzer gives us in-process scenario retry that
+          Surefire's rerunFailingTestsCount cannot provide for Cucumber.
+        -->
         <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-suite</artifactId>
-            <version>${junit.platform.version}</version>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
+
+        <!--
+          Surefire picks exactly ONE provider, and it must be the NATIVE TestNG
+          provider.
+
+          Do NOT add junit-jupiter or org.junit.support:testng-engine back:
+
+          * With JUnit on the classpath Surefire auto-selects the JUnit Platform
+            provider, and the Cucumber suite is silently SKIPPED - zero
+            scenarios, no error.
+          * With testng-engine (the JUnit-bridge for TestNG) the suite IS
+            discovered but every scenario is silently skipped, because
+            AbstractTestNGCucumberTests.scenarios() returns an empty array when
+            its runner is null - and the JUnit Platform evaluates data providers
+            at DISCOVERY time, before the @BeforeClass that builds that runner.
+            Symptom: "data provider 'scenarios' returned an empty array".
+
+          Only the native TestNG provider runs @BeforeClass before the data
+          provider, which is what cucumber-testng requires.
+        -->
+
+        <!--
+          JUnit has been removed entirely. It must NOT come back (directly or
+          transitively): with JUnit on the test classpath Surefire selects the
+          JUnit Platform provider, and the Cucumber/TestNG suite is then
+          silently skipped. The unit tests in com.satviklabs.routine are
+          TestNG tests now for exactly that reason.
+        -->
 
         <!-- Fluent assertions -->
         <dependency>
@@ -159,31 +182,36 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.version}</version>
                 <configuration>
+                    <!--
+                      Two kinds of tests share the "test" phase: the TestNG-driven
+                      Cucumber suite, and the plain Jupiter unit tests in
+                      com.satviklabs.routine. Both are included; Surefire runs
+                      each under its own engine, so they coexist.
+                    -->
                     <includes>
                         <include>**/RunCucumberTest.java</include>
+                        <include>**/routine/*Test.java</include>
                     </includes>
                     <!--
-                      Cucumber's JUnit Platform engine reads its settings as JUnit
-                      configuration parameters, not as plain system properties.
-                      Passing -Dcucumber.filter.tags through here makes the tag
-                      filter actually apply to the suite. The property defaults to
-                      empty, which means "run everything".
+                      TestNG reads its options from the @CucumberOptions
+                      annotation, not from JUnit configuration parameters, so
+                      the tag filter is forwarded as a plain system property
+                      here. ConfigLoader-style resolution means an empty
+                      default means "run everything".
                     -->
-                    <properties>
-                        <configurationParameters>
-                            cucumber.filter.tags=${cucumber.filter.tags}
-                        </configurationParameters>
-                    </properties>
                     <!--
-                      Forward the retry settings to the forked JVM. ConfigLoader
-                      reads system properties first, so these win over .env and
-                      config.properties and can be overridden with -DRETRY_MAX_ATTEMPTS=2.
+                      Cucumber's TestNG runner does NOT read a JUnit
+                      configuration parameter. It resolves the tag filter from
+                      the plain system property "cucumber.filter.tags", so that
+                      is what has to be forwarded to the forked JVM here.
+                      The retry settings are forwarded alongside it so
+                      RETRY_MAX_ATTEMPTS can be overridden on the command line.
                     -->
                     <systemPropertyVariables>
+                        <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
                         <RETRY_ENABLED>${RETRY_ENABLED}</RETRY_ENABLED>
                         <RETRY_MAX_ATTEMPTS>${RETRY_MAX_ATTEMPTS}</RETRY_MAX_ATTEMPTS>
                         <RETRY_TAG_EXCLUDE>${RETRY_TAG_EXCLUDE}</RETRY_TAG_EXCLUDE>
-                        <RETRY_REPORT_DIR>${RETRY_REPORT_DIR}</RETRY_REPORT_DIR>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -235,49 +263,13 @@
         </profile>
 
         <!--
-          mvn -Pretry test : run the suite with the retry analyser enabled.
+          Retry no longer needs its own profile: TestNG retries failed
+          scenarios in-process on every run, controlled by
+          RETRY_MAX_ATTEMPTS (default 1, meaning one extra attempt).
 
-          Failed scenarios are re-run up to RETRY_MAX_ATTEMPTS extra times.
-          A scenario that passes on a retry is reported as FLAKY; one that never
-          passes still fails the build. Retry artefacts land in target/retry/.
-
-          Override on the command line, e.g.:
-            mvn -Pretry test -DRETRY_MAX_ATTEMPTS=2
-            mvn -Pretry test "-Dcucumber.filter.tags=@regression"
+            mvn test -DRETRY_MAX_ATTEMPTS=2
+            mvn test -DRETRY_ENABLED=false
         -->
-        <profile>
-            <id>retry</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <version>${exec-maven-plugin.version}</version>
-                        <configuration>
-                            <mainClass>com.satviklabs.runner.RetrySuiteRunner</mainClass>
-                            <classpathScope>test</classpathScope>
-                            <!--
-                              RetrySuiteRunner forks Maven itself, so it must run
-                              out-of-process: exec:java would share this JVM's
-                              state and the nested build could not start cleanly.
-                            -->
-                            <executable>mvn</executable>
-                            <arguments>
-                                <argument>test</argument>
-                                <argument>-Dretry.rerun=false</argument>
-                            </arguments>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
     </profiles>
 </project>
 

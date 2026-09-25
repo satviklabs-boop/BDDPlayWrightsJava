@@ -5,9 +5,9 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 import java.util.List;
 
@@ -22,22 +22,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * their whole job is to talk to one, and a mock would not prove the tabs or the
  * dialog are actually handled.
  */
-class GenericFunctionsTest {
+public class GenericFunctionsTest {
 
     private static Playwright playwright;
     private static Browser browser;
     private static BrowserContext context;
 
-    @BeforeAll
-    static void launchBrowser() {
+    @BeforeClass
+    public static void launchBrowser() {
         playwright = Playwright.create();
         browser = playwright.chromium().launch(
                 new BrowserType.LaunchOptions().setHeadless(true));
         context = browser.newContext();
     }
 
-    @AfterAll
-    static void closeBrowser() {
+    @AfterClass(alwaysRun = true)
+    public static void closeBrowser() {
         if (browser != null) {
             browser.close();
         }
@@ -49,7 +49,7 @@ class GenericFunctionsTest {
     // --------------------------------------------------------- random number
 
     @Test
-    void randomNumberStaysWithinInclusiveBounds() {
+    public void randomNumberStaysWithinInclusiveBounds() {
         for (int i = 0; i < 500; i++) {
             int value = GenericFunctions.generateRandomNumber(10, 20);
             assertThat(value).isBetween(10, 20);
@@ -57,7 +57,7 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void randomNumberCanProduceBothBounds() {
+    public void randomNumberCanProduceBothBounds() {
         // Not a distribution test: with 500 draws over a 2-wide range, missing an
         // endpoint would mean the range is off by one, which is the bug worth
         // catching here.
@@ -73,26 +73,26 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void singleArgumentFormStartsAtOne() {
+    public void singleArgumentFormStartsAtOne() {
         for (int i = 0; i < 500; i++) {
             assertThat(GenericFunctions.generateRandomNumber(5)).isBetween(1, 5);
         }
     }
 
     @Test
-    void equalBoundsReturnThatValue() {
+    public void equalBoundsReturnThatValue() {
         assertThat(GenericFunctions.generateRandomNumber(7, 7)).isEqualTo(7);
     }
 
     @Test
-    void reversedBoundsAreRejected() {
+    public void reversedBoundsAreRejected() {
         assertThatThrownBy(() -> GenericFunctions.generateRandomNumber(10, 1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("greater than max");
     }
 
     @Test
-    void maxBelowOneIsRejected() {
+    public void maxBelowOneIsRejected() {
         assertThatThrownBy(() -> GenericFunctions.generateRandomNumber(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("at least 1");
@@ -101,7 +101,7 @@ class GenericFunctionsTest {
     // -------------------------------------------------------- window handles
 
     @Test
-    void windowHandlesReportsTheOpenTabs() {
+    public void windowHandlesReportsTheOpenTabs() {
         Page page = context.newPage();
         try {
             assertThat(GenericFunctions.windowHandles(page)).hasSize(1);
@@ -125,7 +125,7 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void windowHandlesRejectsNull() {
+    public void windowHandlesRejectsNull() {
         assertThatThrownBy(() -> GenericFunctions.windowHandles(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("page must not be null");
@@ -134,7 +134,7 @@ class GenericFunctionsTest {
     // -------------------------------------------------------------- dialogs
 
     @Test
-    void alertIsAcceptedAndDoesNotBlock() {
+    public void alertIsAcceptedAndDoesNotBlock() {
         Page page = context.newPage();
         try {
             page.setContent("<button id='go' onclick=\"alert('hello')\">go</button>");
@@ -153,7 +153,7 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void pageStillUsableWhenNoDialogAppears() {
+    public void pageStillUsableWhenNoDialogAppears() {
         Page page = context.newPage();
         try {
             page.setContent("<button id='go'>go</button>");
@@ -169,7 +169,7 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void closeIsIdempotent() throws Exception {
+    public void closeIsIdempotent() throws Exception {
         Page page = context.newPage();
         try {
             AutoCloseable handle = GenericFunctions.acceptAlertIfPresent(page);
@@ -182,7 +182,7 @@ class GenericFunctionsTest {
     }
 
     @Test
-    void acceptAlertRejectsNull() {
+    public void acceptAlertRejectsNull() {
         assertThatThrownBy(() -> GenericFunctions.acceptAlertIfPresent(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("page must not be null");
@@ -190,7 +190,7 @@ class GenericFunctionsTest {
 
     /** The handles list is a snapshot, so mutating it cannot corrupt the context. */
     @Test
-    void returnedHandleListIsImmutable() {
+    public void returnedHandleListIsImmutable() {
         Page page = context.newPage();
         try {
             List<Page> handles = GenericFunctions.windowHandles(page);

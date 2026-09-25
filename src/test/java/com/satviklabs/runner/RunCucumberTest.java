@@ -1,64 +1,83 @@
 package com.satviklabs.runner;
 
 import com.satviklabs.core.Providers.Hooks;
-import org.junit.platform.suite.api.ConfigurationParameter;
-import org.junit.platform.suite.api.IncludeEngines;
-import org.junit.platform.suite.api.SelectClasspathResource;
-import org.junit.platform.suite.api.Suite;
-import org.junit.platform.suite.api.AfterSuite;
-
-import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
-import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
-import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_PROPERTY_NAME;
+import com.satviklabs.core.Retry.Analysis;
+import com.satviklabs.core.Retry.Reporter;
+import io.cucumber.testng.AbstractTestNGCucumberTests;
+import io.cucumber.testng.CucumberOptions;
+import io.cucumber.testng.PickleWrapper;
+import org.testng.ITestContext;
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeSuite;
 
 /**
- * Single entry point for the whole suite.
+ * Single entry point for the whole suite, running on TestNG.
  *
- * Run everything:       mvn test
- * Run by tag:           mvn test -Dcucumber.filter.tags="@smoke"
- * Run one feature file: use a tag that is unique to it (see the note below).
+ * <p>
+ * Run everything: {@code mvn test}. Run by tag:
+ * {@code mvn test -Dcucumber.filter.tags="@smoke"}.
  *
- * Tag filters can also be passed via the Maven profiles in pom.xml
- * (-Psmoke, -Pregression, -Pui, -Papi).
+ * <h2>Why TestNG</h2>
+ * The suite previously ran on the JUnit Platform, which cannot retry Cucumber
+ * scenarios: Surefire's {@code rerunFailingTestsCount} keys off JUnit test
+ * METHODS, whereas Cucumber reports one platform test per scenario through its
+ * own engine, so the setting silently does nothing. TestNG invokes
+ * {@link org.testng.IRetryAnalyzer} once per scenario, so a failure can
+ * actually
+ * be re-run in-process.
+ *
+ * <p>
+ * The retry policy lives in {@link com.satviklabs.core.Retry.Analysis}, which
+ * is what every scenario's {@code @Test(retryAnalyzer = ...)} points at.
  */
-@Suite
-@IncludeEngines("cucumber")
-@SelectClasspathResource("features")
-@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.satviklabs.stepDefinitions,com.satviklabs.core")
-@ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, "
-        + "html:target/cucumber-report.html, "
-        + "json:target/cucumber-report.json, "
-        + "junit:target/TEST-cucumber.xml, "
-        // Extent Reports: the adapter consumes the normal Gherkin events, so
-        // there is no custom listener to maintain. The ":target/extent-report"
-        // suffix is an output DIRECTORY and is mandatory - Cucumber aborts the
-        // whole run with "You must supply an output argument" without it.
-        // Styling (title, theme, screenshots) comes from extent.properties on
-        // the test class path.
-        + "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:target/extent-report")
-@ConfigurationParameter(key = PLUGIN_PUBLISH_QUIET_PROPERTY_NAME, value = "true")
-public class RunCucumberTest {
+@CucumberOptions(features = "src/test/resources/features", glue = { "com.satviklabs.stepDefinitions",
+        "com.satviklabs.core" }, plugin = {
+                "pretty",
+                "html:target/cucumber-report.html",
+                "json:target/cucumber-report.json",
+                // Extent Reports dashboard, driven by the official Cucumber 7
+                // adapter. The trailing ":target/extent-report" is an output
+                // DIRECTORY and is mandatory - Cucumber aborts the run with
+                // "You must supply an output argument" without it.
+                "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:target/extent-report"
+        })
+public class RunCucumberTest extends AbstractTestNGCucumberTests {
 
     /**
-     * Cucumber-JVM with the JUnit Platform engine does not surface a suite-level
-     * teardown hook, so Playwright is closed here once all scenarios are done.
-     * Browsers are already closed per-scenario in {@code Hooks}.
+     * Runs one scenario, with retry attached.
+     *
+     * <p>This deliberately overrides the base class's {@code runScenario} so the
+     * only {@code @Test} in the suite carries
+     * {@code retryAnalyzer = Analysis.class}. The base class declares its own
+     * {@code runScenario} without it, and an override replaces it, so the retry
+     * policy applies to every scenario in one place.
      */
-    @AfterSuite
-    static void tearDownSuite() {
-        Hooks.shutdown();
+    @Override
+    @org.testng.annotations.Test(
+            groups = "cucumber",
+            description = "Runs Cucumber Scenarios",
+            dataProvider = "scenarios",
+            retryAnalyzer = Analysis.class)
+    public void runScenario(PickleWrapper pickleWrapper,
+                            io.cucumber.testng.FeatureWrapper featureWrapper) {
+        super.runScenario(pickleWrapper, featureWrapper);
     }
 
-    //
-    // NOTE ON SELECTING FEATURES
-    //
-    // This suite discovers features from the classpath ("features"), so narrow a
-    // run with TAGS rather than with the cucumber.features property:
-    //
-    //   mvn test -Dcucumber.filter.tags="@api-smoke"
-    //
-    // Setting cucumber.features at the same time makes Cucumber ignore all other
-    // discovery selectors and the engine fails with
-    // "TestEngine with ID 'cucumber' failed to discover tests".
-    //
+    @BeforeSuite(alwaysRun = true)
+    public void resetRetryState() {
+        Reporter.reset();
+    }
+
+    /**
+     * Closes the shared Playwright driver once the whole suite is done.
+     *
+     * <p>
+     * Browsers are already closed per-scenario by {@link Hooks}; this only
+     * shuts down the driver process itself.
+     */
+    @AfterSuite(alwaysRun = true)
+    public void tearDownSuite(ITestContext context) {
+        Reporter.logSummary();
+        Hooks.shutdown();
+    }
 }

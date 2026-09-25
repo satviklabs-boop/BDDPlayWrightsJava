@@ -1,6 +1,6 @@
 package com.satviklabs.routine;
 
-import org.junit.jupiter.api.Test;
+import org.testng.annotations.Test;
 
 import java.util.Map;
 
@@ -18,14 +18,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Also covers the failure modes that used to be silent: a missing key, an
  * absent file, and a malformed row.
  */
-class LocatorLoadingTest {
+public class LocatorLoadingTest {
 
     private static final Map<String, String> LOGIN = GenericFunctions.loadLocators("login");
     private static final Map<String, String> ACCOUNT = GenericFunctions.loadLocators("account");
     private static final Map<String, String> CUSTOMER = GenericFunctions.loadLocators("customer");
 
     @Test
-    void loginCsvHasTheExpectedSelectors() {
+    public void loginCsvHasTheExpectedSelectors() {
         assertThat(LOGIN).containsOnly(
                 Map.entry("usernamefield", "#username"),
                 Map.entry("passwordfield", "#password"),
@@ -36,7 +36,7 @@ class LocatorLoadingTest {
     }
 
     @Test
-    void accountCsvHasTheExpectedSelectors() {
+    public void accountCsvHasTheExpectedSelectors() {
         assertThat(ACCOUNT).containsOnly(
                 Map.entry("pageheading", "h1.accounts-title"),
                 Map.entry("createbutton", "button[data-test='create-account']"),
@@ -46,7 +46,7 @@ class LocatorLoadingTest {
     }
 
     @Test
-    void customerCsvHasTheExpectedSelectors() {
+    public void customerCsvHasTheExpectedSelectors() {
         assertThat(CUSTOMER).containsOnly(
                 Map.entry("pageheading", "h1.customers-title"),
                 Map.entry("searchbox", "input[data-test='customer-search']"),
@@ -58,14 +58,14 @@ class LocatorLoadingTest {
 
     /** Each page has its own map, so a key from another page is not reachable. */
     @Test
-    void pagesAreIsolatedFromEachOther() {
+    public void pagesAreIsolatedFromEachOther() {
         assertThatThrownBy(() -> GenericFunctions.get(LOGIN, "pageHeading"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Missing locator 'pageHeading'");
     }
 
     @Test
-    void unknownKeyFailsFastWithTheAvailableKeys() {
+    public void unknownKeyFailsFastWithTheAvailableKeys() {
         // Keys are normalised to lower case, so the "available keys" list is too.
         assertThatThrownBy(() -> GenericFunctions.get(LOGIN, "noSuchKey"))
                 .isInstanceOf(IllegalStateException.class)
@@ -74,7 +74,7 @@ class LocatorLoadingTest {
     }
 
     @Test
-    void missingFileFailsWithTheExpectedPath() {
+    public void missingFileFailsWithTheExpectedPath() {
         assertThatThrownBy(() -> GenericFunctions.loadLocators("doesNotExist"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("locators/doesNotExist.csv");
@@ -82,20 +82,20 @@ class LocatorLoadingTest {
 
     /** A null map means the page never loaded its CSV - worth a clear message. */
     @Test
-    void nullMapFailsFast() {
+    public void nullMapFailsFast() {
         assertThatThrownBy(() -> GenericFunctions.get(null, "usernameField"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Locator map is null");
     }
 
     @Test
-    void keysAreCaseInsensitiveAndTrimmed() {
+    public void keysAreCaseInsensitiveAndTrimmed() {
         assertThat(GenericFunctions.get(LOGIN, "  USERNAMEfield  ")).isEqualTo("#username");
     }
 
     /** The same page name returns the same map, so a CSV is parsed once per JVM. */
     @Test
-    void repeatedLoadsAreCached() {
+    public void repeatedLoadsAreCached() {
         assertThat(GenericFunctions.loadLocators("login")).isSameAs(LOGIN);
     }
 }

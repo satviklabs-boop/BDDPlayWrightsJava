@@ -7,8 +7,6 @@ import com.microsoft.playwright.APIResponse;
 import com.satviklabs.baseClasses.ConfigLoader;
 import com.satviklabs.core.Providers.ApiClient;
 import com.satviklabs.core.Providers.Hooks;
-import com.satviklabs.core.Retry.Analyzer;
-import com.satviklabs.core.Retry.Config;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.assertj.core.api.Assertions;

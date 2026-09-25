@@ -14,5 +14,6 @@
   "cucumber.glue": ["src/test/java/**/*.java"],
   "cucumberautocomplete.steps": ["src/test/java/**/*.java"],
   "cucumberautocomplete.syncfeatures": "src/test/resources/features/**/*.feature",
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }
