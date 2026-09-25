@@ -1,11 +1,9 @@
-package com.satviklabs.hooks;
+package com.satviklabs.baseClasses;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
-import com.satviklabs.commonUtils.ApiClient;
-import com.satviklabs.commonUtils.ConfigLoader;
 import com.satviklabs.pages.LoginPage;
 import com.satviklabs.baseClasses.PlaywrightProvider;
 import io.cucumber.java.After;

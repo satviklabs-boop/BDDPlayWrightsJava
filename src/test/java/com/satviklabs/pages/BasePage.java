@@ -5,7 +5,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
-import com.satviklabs.commonUtils.ConfigLoader;
+import com.satviklabs.baseClasses.ConfigLoader;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

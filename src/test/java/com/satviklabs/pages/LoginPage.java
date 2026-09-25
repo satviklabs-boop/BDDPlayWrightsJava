@@ -3,7 +3,7 @@ package com.satviklabs.pages;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
-import com.satviklabs.commonUtils.ConfigLoader;
+import com.satviklabs.baseClasses.ConfigLoader;
 import com.satviklabs.routine.GenericFunctions;
 
 import java.util.Map;

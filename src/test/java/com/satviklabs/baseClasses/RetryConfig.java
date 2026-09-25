@@ -1,6 +1,6 @@
 package com.satviklabs.baseClasses;
 
-import com.satviklabs.commonUtils.ConfigLoader;
+import com.satviklabs.baseClasses.ConfigLoader;
 
 /**
  * Configuration for the retry analyser.

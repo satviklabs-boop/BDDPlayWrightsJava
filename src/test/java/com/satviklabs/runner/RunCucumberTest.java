@@ -1,6 +1,6 @@
 package com.satviklabs.runner;
 
-import com.satviklabs.hooks.Hooks;
+import com.satviklabs.baseClasses.Hooks;
 import org.junit.platform.suite.api.ConfigurationParameter;
 import org.junit.platform.suite.api.IncludeEngines;
 import org.junit.platform.suite.api.SelectClasspathResource;

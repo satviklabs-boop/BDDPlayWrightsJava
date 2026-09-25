@@ -1,4 +1,4 @@
-package com.satviklabs.commonUtils;
+package com.satviklabs.baseClasses;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
