@@ -1,0 +1,5 @@
+pageHeading,h1.accounts-title
+createButton,button[data-test='create-account']
+accountsTable,table#accounts
+accountRow,table#accounts tbody tr
+createAccountButton,button[data-test='create-account']

@@ -1,11 +1,11 @@
-package com.satviklabs.steps;
+package com.satviklabs.stepDefinitions;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.microsoft.playwright.APIResponse;
-import com.satviklabs.api.ApiClient;
-import com.satviklabs.config.ConfigLoader;
+import com.satviklabs.commonUtils.ApiClient;
+import com.satviklabs.commonUtils.ConfigLoader;
 import com.satviklabs.hooks.Hooks;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;

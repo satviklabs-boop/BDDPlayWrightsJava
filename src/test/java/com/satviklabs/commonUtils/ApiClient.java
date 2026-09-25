@@ -1,4 +1,4 @@
-package com.satviklabs.api;
+package com.satviklabs.commonUtils;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -8,7 +8,7 @@ import com.microsoft.playwright.APIRequestContext;
 import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.RequestOptions;
-import com.satviklabs.config.ConfigLoader;
+import com.satviklabs.commonUtils.ConfigLoader;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.satviklabs.steps;
+package com.satviklabs.stepDefinitions;
 
 import com.satviklabs.hooks.Hooks;
 import com.satviklabs.pages.LoginPage;

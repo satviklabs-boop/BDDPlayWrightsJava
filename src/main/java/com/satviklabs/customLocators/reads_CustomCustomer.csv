@@ -1,0 +1,6 @@
+pageHeading,h1.customers-title
+searchBox,input[data-test='customer-search']
+addButton,button[data-test='add-customer']
+customerRow,table#customers tbody tr
+editRowButton,button[data-test='edit-customer']
+deleteRowButton,button[data-test='delete-customer']

@@ -3,14 +3,15 @@ package com.satviklabs.pages;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
-import com.satviklabs.config.ConfigLoader;
-import com.satviklabs.locators.Locators;
+import com.satviklabs.commonUtils.ConfigLoader;
+import com.satviklabs.customLocators.ByLoginLocators;
 
 /**
  * Page object for https://the-internet.herokuapp.com/login
  *
- * Selectors come from {@link Locators.Login} so that this class stays free of
- * raw CSS strings and every page has a single source of truth for its DOM.
+ * Selectors come from {@link ByLoginLocators}, whose static block loads
+ * {@code reads_CustomLogin.csv} once, so this class stays free of raw CSS
+ * strings and a renamed selector is caught at compile time.
  */
 public class LoginPage extends BasePage {
 
@@ -25,12 +26,12 @@ public class LoginPage extends BasePage {
 
     public LoginPage(Page page) {
         super(page);
-        this.usernameField = page.locator(Locators.Login.USERNAME_FIELD);
-        this.passwordField = page.locator(Locators.Login.PASSWORD_FIELD);
-        this.loginButton = page.locator(Locators.Login.LOGIN_BUTTON);
-        this.flashMessage = page.locator(Locators.Login.FLASH_MESSAGE);
-        this.logoutButton = page.locator(Locators.Login.LOGOUT_BUTTON);
-        this.heading = page.locator(Locators.Login.HEADING);
+        this.usernameField = page.locator(ByLoginLocators.By.USERNAME_FIELD);
+        this.passwordField = page.locator(ByLoginLocators.By.PASSWORD_FIELD);
+        this.loginButton = page.locator(ByLoginLocators.By.LOGIN_BUTTON);
+        this.flashMessage = page.locator(ByLoginLocators.By.FLASH_MESSAGE);
+        this.logoutButton = page.locator(ByLoginLocators.By.LOGOUT_BUTTON);
+        this.heading = page.locator(ByLoginLocators.By.HEADING);
     }
 
     /** Opens the login page and waits for it to be interactive. */

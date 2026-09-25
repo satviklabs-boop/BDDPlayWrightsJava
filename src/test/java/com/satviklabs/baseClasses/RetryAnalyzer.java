@@ -1,4 +1,4 @@
-package com.satviklabs.support.retry;
+package com.satviklabs.baseClasses;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

@@ -24,7 +24,7 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PUBLISH_QUIET_P
 @Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
-@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.satviklabs.steps,com.satviklabs.hooks")
+@ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.satviklabs.stepDefinitions,com.satviklabs.hooks")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, "
         + "html:target/cucumber-report.html, "
         + "json:target/cucumber-report.json, "

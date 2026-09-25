@@ -1,7 +1,7 @@
 package com.satviklabs.runner;
 
-import com.satviklabs.support.retry.RetryAnalyzer;
-import com.satviklabs.support.retry.RetryConfig;
+import com.satviklabs.baseClasses.RetryAnalyzer;
+import com.satviklabs.baseClasses.RetryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

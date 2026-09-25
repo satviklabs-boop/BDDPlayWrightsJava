@@ -1,4 +1,4 @@
-﻿{
+{
   "java.compile.nullAnalysis.mode": "automatic",
 
   // Cucumber step-definition navigation for VS Code.
@@ -13,5 +13,6 @@
   // Install either one; both will resolve the same files.
   "cucumber.glue": ["src/test/java/**/*.java"],
   "cucumberautocomplete.steps": ["src/test/java/**/*.java"],
-  "cucumberautocomplete.syncfeatures": "src/test/resources/features/**/*.feature"
+  "cucumberautocomplete.syncfeatures": "src/test/resources/features/**/*.feature",
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

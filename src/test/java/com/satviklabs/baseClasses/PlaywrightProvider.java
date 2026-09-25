@@ -1,4 +1,4 @@
-package com.satviklabs.support;
+package com.satviklabs.baseClasses;
 
 import com.microsoft.playwright.Playwright;
 

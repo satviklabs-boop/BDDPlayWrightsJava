@@ -141,23 +141,36 @@
 
     <build>
         <!--
-          Locators.text holds the selector store. .text is NOT a
-          default Maven resource extension, so it must be listed explicitly here
-          or it would never reach the test classpath and Locators would fail to
-          start. The first <testResource> keeps Maven's default behaviour for
-          config.properties, features/**, logback-test.xml, etc.
+          The per-page locator CSVs live next to the locator classes in
+          src/main/java/com/satviklabs/customLocators/ (reads_CustomLogin.csv,
+          reads_CustomAccount.csv, reads_CustomCustomer.csv).
+
+          That folder is inside src/main/java, where Maven does NOT look for
+          resources, and .csv is not a default resource extension either - so two
+          things are needed:
+            1. register the folder as a <resource> of the main jar, and
+            2. copy it again under <testResources>, because the copy that ends up
+               inside the jar is not expanded onto Surefire's test classpath.
+          Missing either step means LoadLocators cannot find the CSV at runtime.
         -->
+        <resources>
+            <resource>
+                <directory>src/main/java/com/satviklabs/customLocators</directory>
+                <includes>
+                    <include>*.csv</include>
+                </includes>
+            </resource>
+        </resources>
         <testResources>
+            <!-- Maven's defaults for config.properties, features/**, etc. -->
             <testResource>
                 <directory>src/test/resources</directory>
-                <excludes>
-                    <exclude>Locators.text</exclude>
-                </excludes>
             </testResource>
             <testResource>
-                <directory>src/test/resources</directory>
+                <directory>src/main/java/com/satviklabs/customLocators</directory>
+                <targetPath>com/satviklabs/customLocators</targetPath>
                 <includes>
-                    <include>Locators.text</include>
+                    <include>*.csv</include>
                 </includes>
             </testResource>
         </testResources>
