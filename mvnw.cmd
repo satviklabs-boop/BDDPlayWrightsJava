@@ -32,12 +32,22 @@
 @SET __MVNW_ERROR__=
 @SET __MVNW_PSMODULEP_SAVE=%PSModulePath%
 @SET PSModulePath=
-@FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
+@REM Resolve powershell.exe explicitly. A bare "powershell" fails when
+@REM PATH is minimal (some CI agents and non-login shells ship a stripped
+@REM PATH), which surfaced as "'powershell' is not recognized ... Cannot
+@REM start maven from wrapper". Windows PowerShell 5.1 always ships at the
+@REM path below on Win7+, so prefer it; fall back to PATH for the rare
+@REM install that lacks it. Invoked unquoted to avoid nested-quote problems
+@REM inside the FOR /F command below.
+@SET __MVNW_PS__=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe
+@IF NOT EXIST "%__MVNW_PS__%" (SET __MVNW_PS__=powershell)
+@FOR /F "usebackq tokens=1* delims==" %%A IN (`%__MVNW_PS__% -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @(
   IF "%%A"=="MVN_CMD" (set __MVNW_CMD__=%%B) ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)
 )
 @SET PSModulePath=%__MVNW_PSMODULEP_SAVE%
 @SET __MVNW_PSMODULEP_SAVE=
 @SET __MVNW_ARG0_NAME__=
+@SET __MVNW_PS__=
 @SET MVNW_USERNAME=
 @SET MVNW_PASSWORD=
 @IF NOT "%__MVNW_CMD__%"=="" ("%__MVNW_CMD__%" %*)
